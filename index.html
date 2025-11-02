@@ -150,14 +150,21 @@
 </div>
 
 <script>
+<script>
 function toCents(v){const n=parseFloat(v);return isNaN(n)?0:Math.round(n*100);}
 function fmtUSD(c){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(c/100);}
+function roundToNearest50Cents(c){
+  const dollars=c/100;
+  const rounded=Math.round(dollars*2)/2;
+  return Math.round(rounded*100);
+}
 function distributeEvenly(total,n){
   if(n<=0)return {each:0,list:[]};
   const base=Math.floor(total/n);
   let rem=total-base*n;
   return {each:base,list:Array.from({length:n},(_,i)=>base+(i<rem?1:0))};
 }
+
 function recalc(){
   const cc=toCents(document.getElementById('cc').value);
   const cash=toCents(document.getElementById('cash').value);
@@ -165,21 +172,47 @@ function recalc(){
   const bus1Pct=parseFloat(document.getElementById('bus1Pct').value)||0;
   const runnerPct=parseFloat(document.getElementById('runnerPct').value)||0;
   const total=cc+cash;
-  const busPool=Math.round(busPct/100*total);
-  const bus1=Math.round(bus1Pct/100*busPool);
-  const bus2=busPool-bus1;
-  const runner=Math.round(runnerPct/100*total);
-  const remain=total-busPool-runner;
+
+  const bartender=Math.round(0.05*total);     // 5% bartender
+  const afterBar=total-bartender;             // remainder for normal split
+
+  const busPool=Math.round(busPct/100*afterBar);
+  const bus1Share=Math.round(bus1Pct/100*busPool);
+  const bus2Share=busPool-bus1Share;
+  const runner=Math.round(runnerPct/100*afterBar);
+  const remaining=afterBar-busPool-runner;
+
+  // add cash tips directly to bus1
+  let bus1Total=bus1Share+cash;
+  let bus2Total=bus2Share;
+
+  // round bussers to nearest $0.50
+  bus1Total=roundToNearest50Cents(bus1Total);
+  bus2Total=roundToNearest50Cents(bus2Total);
+
   const waiterNames=document.getElementById('waiters').value.split(',').map(x=>x.trim()).filter(Boolean);
-  const split=distributeEvenly(remain,waiterNames.length);
+  const split=distributeEvenly(remaining,waiterNames.length);
+
   document.getElementById('mTotal').innerText=fmtUSD(total);
   document.getElementById('mBus').innerText=fmtUSD(busPool);
   document.getElementById('mRunner').innerText=fmtUSD(runner);
-  document.getElementById('mBus1').innerText=fmtUSD(bus1);
-  document.getElementById('mBus2').innerText=fmtUSD(bus2);
-  document.getElementById('mRemain').innerText=fmtUSD(remain);
+  document.getElementById('mBus1').innerText=fmtUSD(bus1Total);
+  document.getElementById('mBus2').innerText=fmtUSD(bus2Total);
+  document.getElementById('mRemain').innerText=fmtUSD(remaining);
+
   const payouts=document.getElementById('waiterPayouts');
   payouts.innerHTML='';
+  // bartender
+  const bartDiv=document.createElement('div');
+  bartDiv.className='pill';
+  bartDiv.innerHTML=`<div><b>Bartender</b><div class='small'>5% of total</div></div><div><b>${fmtUSD(bartender)}</b></div>`;
+  payouts.appendChild(bartDiv);
+  // busboy1 cash info
+  const cashDiv=document.createElement('div');
+  cashDiv.className='pill';
+  cashDiv.innerHTML=`<div><b>Busboy 1 (Cash)</b></div><div><b>${fmtUSD(cash)}</b></div>`;
+  payouts.appendChild(cashDiv);
+  // waiter splits
   waiterNames.forEach((n,i)=>{
     const c=split.list[i]||0;
     const d=document.createElement('div');
@@ -187,9 +220,11 @@ function recalc(){
     d.innerHTML=`<div><b>${n}</b><div class='small'>Equal share</div></div><div><b>${fmtUSD(c)}</b></div>`;
     payouts.appendChild(d);
   });
-  const sum=bus1+bus2+runner+split.list.reduce((a,b)=>a+b,0);
+
+  const sum=bus1Total+bus2Total+runner+split.list.reduce((a,b)=>a+b,0)+bartender;
   document.getElementById('checkLine').innerText=`Check: ${fmtUSD(sum)} = ${fmtUSD(total)}`;
 }
+
 ['cc','cash','busPct','bus1Pct','runnerPct','bus1Name','bus2Name','runnerName','waiters'].forEach(id=>{
   document.getElementById(id).addEventListener('input',recalc);
 });
