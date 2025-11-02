@@ -172,26 +172,32 @@ function recalc(){
   const runnerPct=parseFloat(document.getElementById('runnerPct').value)||0;
   const total=cc+cash;
 
-  const bartender=Math.round(0.05*total);     // 5% bartender
-  const afterBar=total-bartender;             // remainder for normal split
+  // 5% bartender from grand total
+  const bartender=Math.round(0.05*total);
 
-  const busPool=Math.round(busPct/100*afterBar);
+  // Busboys 15% of grand total (not post-bartender)
+  const busPool=Math.round(busPct/100*total);
   const bus1Share=Math.round(bus1Pct/100*busPool);
   const bus2Share=busPool-bus1Share;
-  const runner=Math.round(runnerPct/100*afterBar);
-  const remaining=afterBar-busPool-runner;
 
-  // add cash tips directly to bus1
+  // Add cash tips directly to bus1
   let bus1Total=bus1Share+cash;
   let bus2Total=bus2Share;
 
-  // round bussers to nearest $0.50
+  // Round bussers to nearest $0.50
   bus1Total=roundToNearest50Cents(bus1Total);
   bus2Total=roundToNearest50Cents(bus2Total);
+
+  // Runner 7.5% of grand total
+  const runner=Math.round(runnerPct/100*total);
+
+  // Remaining after all roles
+  const remaining=total-bartender-busPool-runner;
 
   const waiterNames=document.getElementById('waiters').value.split(',').map(x=>x.trim()).filter(Boolean);
   const split=distributeEvenly(remaining,waiterNames.length);
 
+  // Display main metrics
   document.getElementById('mTotal').innerText=fmtUSD(total);
   document.getElementById('mBus').innerText=fmtUSD(busPool);
   document.getElementById('mRunner').innerText=fmtUSD(runner);
@@ -201,17 +207,20 @@ function recalc(){
 
   const payouts=document.getElementById('waiterPayouts');
   payouts.innerHTML='';
-  // bartender
+
+  // Bartender
   const bartDiv=document.createElement('div');
   bartDiv.className='pill';
   bartDiv.innerHTML=`<div><b>Bartender</b><div class='small'>5% of total</div></div><div><b>${fmtUSD(bartender)}</b></div>`;
   payouts.appendChild(bartDiv);
-  // busboy1 cash info
+
+  // Busboy1 cash info
   const cashDiv=document.createElement('div');
   cashDiv.className='pill';
   cashDiv.innerHTML=`<div><b>Busboy 1 (Cash)</b></div><div><b>${fmtUSD(cash)}</b></div>`;
   payouts.appendChild(cashDiv);
-  // waiter splits
+
+  // Waiters
   waiterNames.forEach((n,i)=>{
     const c=split.list[i]||0;
     const d=document.createElement('div');
@@ -220,6 +229,7 @@ function recalc(){
     payouts.appendChild(d);
   });
 
+  // Check line
   const sum=bus1Total+bus2Total+runner+split.list.reduce((a,b)=>a+b,0)+bartender;
   document.getElementById('checkLine').innerText=`Check: ${fmtUSD(sum)} = ${fmtUSD(total)}`;
 }
