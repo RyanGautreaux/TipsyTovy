@@ -148,15 +148,10 @@
     <div class="small" id="checkLine"></div>
   </div>
 </div>
-
 <script>
 function toCents(v){const n=parseFloat(v);return isNaN(n)?0:Math.round(n*100);}
 function fmtUSD(c){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(c/100);}
-function roundToNearest50Cents(c){
-  const dollars=c/100;
-  const rounded=Math.round(dollars*2)/2;
-  return Math.round(rounded*100);
-}
+function round50(c){const d=c/100;const r=Math.round(d*2)/2;return Math.round(r*100);}
 function distributeEvenly(total,n){
   if(n<=0)return {each:0,list:[]};
   const base=Math.floor(total/n);
@@ -166,41 +161,57 @@ function distributeEvenly(total,n){
 
 function recalc(){
   const cc=toCents(document.getElementById('cc').value);
-  const cash=toCents(document.getElementById('cash').value);
+  let cash=toCents(document.getElementById('cash').value);
+  const total=cc+cash;
+
   const busPct=parseFloat(document.getElementById('busPct').value)||0;
   const bus1Pct=parseFloat(document.getElementById('bus1Pct').value)||0;
   const runnerPct=parseFloat(document.getElementById('runnerPct').value)||0;
-  const total=cc+cash;
 
-  // 5% bartender from grand total
   const bartender=Math.round(0.05*total);
-
-  // Busboys 15% of grand total (not post-bartender)
   const busPool=Math.round(busPct/100*total);
-  const bus1Share=Math.round(bus1Pct/100*busPool);
-  const bus2Share=busPool-bus1Share;
+  const bus1Target=Math.round(bus1Pct/100*busPool);
+  const bus2Target=busPool-bus1Target;
+  let runnerTarget=Math.round(runnerPct/100*total);
 
-  // Add cash tips directly to bus1
-  let bus1Total=bus1Share+cash;
-  let bus2Total=bus2Share;
+  // --- Cash-first logic ---
+  let bus1Cash=0, bus2Cash=0, runnerCash=0;
 
-  // Round bussers to nearest $0.50
-  bus1Total=roundToNearest50Cents(bus1Total);
-  bus2Total=roundToNearest50Cents(bus2Total);
+  // pay Busboy 1 from cash
+  if(cash>=bus1Target){ bus1Cash=bus1Target; cash-=bus1Target; }
+  else { bus1Cash=cash; cash=0; }
 
-  // Runner 7.5% of grand total
-  const runner=Math.round(runnerPct/100*total);
+  // if cash left, pay Busboy 2
+  if(cash>0){
+    if(cash>=bus2Target){ bus2Cash=bus2Target; cash-=bus2Target; }
+    else { bus2Cash=cash; cash=0; }
+  }
 
-  // Remaining after all roles
-  const remaining=total-bartender-busPool-runner;
+  // if still cash left, goes to runner
+  if(cash>0){ runnerCash=cash; cash=0; }
+
+  // compute book portions
+  let bus1Book=bus1Target-bus1Cash;
+  let bus2Book=bus2Target-bus2Cash;
+  let runnerBook=runnerTarget-runnerCash;
+
+  // round busser totals (cash+book)
+  let bus1Total=round50(bus1Book+bus1Cash);
+  let bus2Total=round50(bus2Book+bus2Cash);
+
+  // recompute actual totals after rounding
+  const totalBussers=bus1Total+bus2Total;
+  const totalBart= bartender;
+  const totalRunner=runnerBook+runnerCash;
+  const remaining=total - (totalBussers + totalRunner + totalBart);
 
   const waiterNames=document.getElementById('waiters').value.split(',').map(x=>x.trim()).filter(Boolean);
   const split=distributeEvenly(remaining,waiterNames.length);
 
-  // Display main metrics
+  // display metrics
   document.getElementById('mTotal').innerText=fmtUSD(total);
   document.getElementById('mBus').innerText=fmtUSD(busPool);
-  document.getElementById('mRunner').innerText=fmtUSD(runner);
+  document.getElementById('mRunner').innerText=fmtUSD(runnerTarget);
   document.getElementById('mBus1').innerText=fmtUSD(bus1Total);
   document.getElementById('mBus2').innerText=fmtUSD(bus2Total);
   document.getElementById('mRemain').innerText=fmtUSD(remaining);
@@ -208,19 +219,26 @@ function recalc(){
   const payouts=document.getElementById('waiterPayouts');
   payouts.innerHTML='';
 
-  // Bartender
   const bartDiv=document.createElement('div');
   bartDiv.className='pill';
   bartDiv.innerHTML=`<div><b>Bartender</b><div class='small'>5% of total</div></div><div><b>${fmtUSD(bartender)}</b></div>`;
   payouts.appendChild(bartDiv);
 
-  // Busboy1 cash info
-  const cashDiv=document.createElement('div');
-  cashDiv.className='pill';
-  cashDiv.innerHTML=`<div><b>Busboy 1 (Cash)</b></div><div><b>${fmtUSD(cash)}</b></div>`;
-  payouts.appendChild(cashDiv);
+  const b1=document.createElement('div');
+  b1.className='pill';
+  b1.innerHTML=`<div><b>Busboy 1</b><div class='small'>Cash: ${fmtUSD(bus1Cash)} + Book: ${fmtUSD(bus1Book)}</div></div><div><b>${fmtUSD(bus1Total)}</b></div>`;
+  payouts.appendChild(b1);
 
-  // Waiters
+  const b2=document.createElement('div');
+  b2.className='pill';
+  b2.innerHTML=`<div><b>Busboy 2</b><div class='small'>Cash: ${fmtUSD(bus2Cash)} + Book: ${fmtUSD(bus2Book)}</div></div><div><b>${fmtUSD(bus2Total)}</b></div>`;
+  payouts.appendChild(b2);
+
+  const run=document.createElement('div');
+  run.className='pill';
+  run.innerHTML=`<div><b>Runner</b><div class='small'>Cash: ${fmtUSD(runnerCash)} + Book: ${fmtUSD(runnerBook)}</div></div><div><b>${fmtUSD(totalRunner)}</b></div>`;
+  payouts.appendChild(run);
+
   waiterNames.forEach((n,i)=>{
     const c=split.list[i]||0;
     const d=document.createElement('div');
@@ -229,18 +247,14 @@ function recalc(){
     payouts.appendChild(d);
   });
 
-  // Check line
-  const sum=bus1Total+bus2Total+runner+split.list.reduce((a,b)=>a+b,0)+bartender;
+  const sum=totalBussers+totalBart+totalRunner+split.list.reduce((a,b)=>a+b,0);
   document.getElementById('checkLine').innerText=`Check: ${fmtUSD(sum)} = ${fmtUSD(total)}`;
 }
 
 ['cc','cash','busPct','bus1Pct','runnerPct','bus1Name','bus2Name','runnerName','waiters'].forEach(id=>{
   document.getElementById(id).addEventListener('input',recalc);
 });
-function copyBreakdown(){
-  navigator.clipboard.writeText(document.body.innerText);
-  alert('Copied breakdown to clipboard.');
-}
+function copyBreakdown(){navigator.clipboard.writeText(document.body.innerText);alert('Copied breakdown.');}
 function resetAll(){
   document.querySelectorAll('input').forEach(i=>i.value='');
   document.getElementById('busPct').value=15;
@@ -250,9 +264,8 @@ function resetAll(){
   recalc();
 }
 recalc();
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('service-worker.js');
-}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('service-worker.js');}
 </script>
+
 </body>
 </html>
