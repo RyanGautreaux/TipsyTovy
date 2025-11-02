@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tip Split Calculator</title>
+  <meta name="theme-color" content="#0ea5e9"/>
+  <style>
+    :root {
+      --bg:#f7f7f8;
+      --card:#ffffff;
+      --text:#111827;
+      --muted:#6b7280;
+      --primary:#0ea5e9;
+      --border:#e5e7eb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: var(--bg); color: var(--text);
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 16px; }
+    h1 { font-size: 1.5rem; margin: 8px 0 2px; }
+    .muted { color: var(--muted); font-size: 0.95rem; }
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .grid { display: grid; gap: 12px; }
+    @media (min-width: 720px) { .grid.cols-3 { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 720px) { .grid.cols-2 { grid-template-columns: repeat(2, 1fr); } }
+
+    label { display:block; font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; }
+    input[type="number"], input[type="text"] {
+      width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: #fff; font-size: 1rem;
+    }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .btn {
+      appearance: none; border: 1px solid var(--border); background: #fff; padding: 10px 14px;
+      border-radius: 12px; font-weight: 600; cursor: pointer;
+    }
+    .btn.primary { background: var(--primary); color: white; border-color: var(--primary); }
+    .btn.ghost { background: transparent; }
+    .btn:active { transform: translateY(1px); }
+    .pill {
+      border: 1px solid var(--border); background: #fff; border-radius: 16px; padding: 10px 12px;
+      display:flex; align-items:center; justify-content: space-between;
+    }
+    .metric { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background:#fff; }
+    .metric .label { font-size: 0.75rem; color: var(--muted); }
+    .metric .value { font-weight: 700; margin-top: 2px; }
+    .list { max-height: 260px; overflow: auto; display: grid; gap: 8px; }
+    .foot { color: var(--muted); font-size: 0.75rem; }
+    .spacer { height: 6px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Tip Split Calculator</h1>
+    <div class="muted">Enter your totals → exact-cent payouts for busboys, food runner, and waiters. Works offline.</div>
+
+    <div class="spacer"></div>
+
+    <div class="card">
+      <div class="grid cols-3">
+        <div>
+          <label>Credit Card Tips ($)</label>
+          <input id="cc" type="number" step="0.01" min="0" placeholder="0.00">
+        </div>
+        <div>
+          <label>Cash Tips ($)</label>
+          <input id="cash" type="number" step="0.01" min="0" placeholder="0.00">
+        </div>
+        <div class="row" style="align-items:flex-end;">
+          <button class="btn" id="copy">Copy breakdown</button>
+          <button class="btn" id="exportCsv">Export CSV</button>
+          <button class="btn" id="reset">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="grid cols-2">
+      <div class="card">
+        <div class="grid cols-2">
+          <div>
+            <label>Busboys % of total</label>
+            <input id="busPct" type="number" step="0.1" min="0" max="100" value="15">
+          </div>
+          <div>
+            <label>Busboy 1 % of busboys pool</label>
+            <input id="bus1Pct" type="number" step="0.1" min="0" max="100" value="65">
+          </div>
+          <div>
+            <label>Runner % of total</label>
+            <input id="runnerPct" type="number" step="0.1" min="0" max="100" value="7.5">
+          </div>
+        </div>
+        <div class="foot">Busboy 2 automatically gets the remainder of the busboys pool.</div>
+      </div>
+
+      <div class="card">
+        <div class="grid">
+          <div class="grid cols-2">
+            <div>
+              <label>Busboy 1 name</label>
+              <input id="bus1Name" type="text" value="Busboy 1">
+            </div>
+            <div>
+              <label>Busboy 2 name</label>
+              <input id="bus2Name" type="text" value="Busboy 2">
+            </div>
+            <div>
+              <label>Food runner name</label>
+              <input id="runnerName" type="text" value="Food Runner">
+            </div>
+          </div>
+
+          <div class="row" style="justify-content: space-between; margin-top: 4px;">
+            <div style="font-weight:700;">Waiters</div>
+            <div class="row">
+              <button class="btn" id="addWaiter">+ Add</button>
+              <button class="btn ghost" id="clearWaiters">Clear</button>
+            </div>
+          </div>
+          <div class="list" id="waiterList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="card">
+      <div class="grid cols-3">
+        <div class="metric">
+          <div class="label">Grand total</div>
+          <div class="value" id="mTotal">$0.00</div>
+        </div>
+        <div class="metric">
+          <div class="label" id="mBusLabel">Busboys (15%)</div>
+          <div class="value" id="mBus">$0.00</div>
+        </div>
+        <div class="metric">
+          <div class="label" id="mRunnerLabel">Runner (7.5%)</div>
+          <div class="value" id="mRunner">$0.00</div>
+        </div>
+      </div>
+      <div class="spacer"></div>
+      <div class="grid cols-3">
+        <div class="metric">
+          <div class="label" id="mBus1Label">Busboy 1</div>
+          <div class="value" id="mBus1">$0.00</div>
+        </div>
+        <div class="metric">
+          <div class="label" id="mBus2Label">Busboy 2</div>
+          <div class="value" id="mBus2">$0.00</div>
+        </div>
+        <div class="metric">
+          <div class="label" id="mRemainLabel">Remaining for waiters</div>
+          <div class="value" id="mRemain">$0.00</div>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+      <div id="waiterPayouts" class="grid"></div>
+
+      <div class="foot" id="checkLine">Check: $0.00 = $0.00</div>
+    </div>
+
+    <div class="spacer"></div>
+    <div class="muted">Tip: Once this page is open on your phone, use Share → “Add to Home Screen” (iPhone) or ⋮ → “Add to Home Screen” (Android) to use it like an app.</div>
+  </div>
+
+<script>
+  // --- Helpers ---
+  const $ = (id) => document.getElementById(id);
+  const toCents = (v) => {
+    if (v === null || v === undefined || v === \"\") return 0;
+    const n = parseFloat(v); if (Number.isNaN(n)) return 0;
+    return Math.round(n * 100);
+  };
+  const fmtUSD = (cents) => (new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format((cents||0)/100));
+
+  function distributeEvenlyCents(totalCents, n) {
+    if (n <= 0) return { list: [], each: 0 };
+    const base = Math.floor(totalCents / n);
+    let remainder = totalCents - base * n;
+    const list = Array.from({length:n}, (_, i) => base + (i < remainder ? 1 : 0));
+    return { list, each: base };
+  }
+
+  // --- State ---
+  const state = {
+    waiters: ['Waiter 1', 'Waiter 2']
+  };
+
+  // --- UI setup ---
+  function renderWaiters() {
+    const list = $('waiterList');
+    list.innerHTML = '';
+    state.waiters.forEach((name, idx) => {
+      const row = document.createElement('div');
+      row.className = 'pill';
+      row.innerHTML = \`
+        <input type=\"text\" value=\"\${name}\" style=\"flex:1; border:none; outline:none; font-size:1rem;\" />
+        <button class=\"btn\" data-remove=\"\${idx}\">Remove</button>
+      \`;
+      row.querySelector('input').addEventListener('input', (e) => {
+        state.waiters[idx] = e.target.value;
+        recalc();
+      });
+      row.querySelector('button').addEventListener('click', () => {
+        state.waiters.splice(idx,1);
+        renderWaiters();
+        recalc();
+      });
+      list.appendChild(row);
+    });
+  }
+
+  function recalc() {
+    const cc = toCents($('cc').value);
+    const cash = toCents($('cash').value);
+    const busPct = parseFloat($('busPct').value || 0);
+    const bus1Pct = parseFloat($('bus1Pct').value || 0);
+    const runnerPct = parseFloat($('runnerPct').value || 0);
+    const bus1Name = $('bus1Name').value || 'Busboy 1';
+    const bus2Name = $('bus2Name').value || 'Busboy 2';
+    const runnerName = $('runnerName').value || 'Food Runner';
+
+    const total = cc + cash;
+    const busPool = Math.round(busPct/100 * total);
+    const bus1 = Math.round(bus1Pct/100 * busPool);
+    const bus2 = busPool - bus1;
+    const runner = Math.round(runnerPct/100 * total);
+    const remaining = total - busPool - runner;
+    const split = distributeEvenlyCents(remaining, state.waiters.length);
+
+    // Update metric labels/values
+    $('mTotal').textContent = fmtUSD(total);
+    $('mBusLabel').textContent = \`Busboys (\${busPct}%)\`;
+    $('mBus').textContent = fmtUSD(busPool);
+    $('mRunnerLabel').textContent = \`Runner (\${runnerPct}%)\`;
+    $('mRunner').textContent = fmtUSD(runner);
+    $('mBus1Label').textContent = bus1Name + \` (\${bus1Pct}% of busboys)\`;
+    $('mBus1').textContent = fmtUSD(bus1);
+    $('mBus2Label').textContent = bus2Name + ' (remainder)';
+    $('mBus2').textContent = fmtUSD(bus2);
+    $('mRemain').textContent = fmtUSD(remaining);
+
+    // Waiter payouts
+    const wp = $('waiterPayouts');
+    wp.innerHTML = '';
+    wp.className = 'grid cols-2';
+    state.waiters.forEach((name, i) => {
+      const cents = split.list[i] || 0;
+      const d = document.createElement('div');
+      d.className = 'pill';
+      d.innerHTML = \`
+        <div style=\"display:flex; flex-direction:column;\">
+          <strong>\${name || ('Waiter ' + (i+1))}</strong>
+          <span class=\"foot\">Equal share</span>
+        </div>
+        <div style=\"font-weight:700;\">\${fmtUSD(cents)}</div>
+      \`;
+      wp.appendChild(d);
+    });
+
+    const sumCheck = bus1 + bus2 + runner + split.list.reduce((a,b)=>a+b,0);
+    $('checkLine').textContent = \`Check: \${fmtUSD(sumCheck)} = \${fmtUSD(total)}\`;
+
+    // Save to localStorage (so values persist if added to home screen)
+    const payload = {
+      cc: $('cc').value, cash: $('cash').value,
+      busPct, bus1Pct, runnerPct,
+      bus1Name, bus2Name, runnerName,
+      waiters: state.waiters
+    };
+    localStorage.setItem('tipSplitState', JSON.stringify(payload));
+  }
+
+  function copyBreakdown() {
+    const cc = toCents($('cc').value);
+    const cash = toCents($('cash').value);
+    const busPct = parseFloat($('busPct').value || 0);
+    const bus1Pct = parseFloat($('bus1Pct').value || 0);
+    const runnerPct = parseFloat($('runnerPct').value || 0);
+    const bus1Name = $('bus1Name').value || 'Busboy 1';
+    const bus2Name = $('bus2Name').value || 'Busboy 2';
+    const runnerName = $('runnerName').value || 'Food Runner';
+
+    const total = cc + cash;
+    const busPool = Math.round(busPct/100 * total);
+    const bus1 = Math.round(bus1Pct/100 * busPool);
+    const bus2 = busPool - bus1;
+    const runner = Math.round(runnerPct/100 * total);
+    const remaining = total - busPool - runner;
+    const split = distributeEvenlyCents(remaining, state.waiters.length);
+    const payouts = state.waiters.map((name, i) => ({ role:'Waiter', name, cents: split.list[i] || 0 }));
+    const lines = [
+      \`Grand total: \${fmtUSD(total)}\`,
+      \`Busboys (\${busPct}%): \${fmtUSD(busPool)} — \${bus1Name} (\${bus1Pct}%): \${fmtUSD(bus1)}, \${bus2Name}: \${fmtUSD(bus2)}\`,
+      \`Food runner (\${runnerPct}%): \${fmtUSD(runner)}\`,
+      \`Remaining for waiters (\${state.waiters.length}): \${fmtUSD(remaining)}\`,
+      '', 'Payouts:',
+      \`Busboy\\t\${bus1Name}\\t\${(bus1/100).toFixed(2)}\`,
+      \`Busboy\\t\${bus2Name}\\t\${(bus2/100).toFixed(2)}\`,
+      \`Runner\\t\${runnerName}\\t\${(runner/100).toFixed(2)}\`,
+      ...payouts.map(p => \`\${p.role}\\t\${p.name}\\t\${(p.cents/100).toFixed(2)}\`),
+    ];
+    navigator.clipboard.writeText(lines.join('\\n')).then(() => {
+      alert('Breakdown copied to clipboard.');
+    }, () => alert('Copy failed.'));
+  }
+
+  function exportCSV() {
+    const cc = toCents($('cc').value);
+    const cash = toCents($('cash').value);
+    const busPct = parseFloat($('busPct').value || 0);
+    const bus1Pct = parseFloat($('bus1Pct').value || 0);
+    const runnerPct = parseFloat($('runnerPct').value || 0);
+    const bus1Name = $('bus1Name').value || 'Busboy 1';
+    const bus2Name = $('bus2Name').value || 'Busboy 2';
+    const runnerName = $('runnerName').value || 'Food Runner';
+
+    const total = cc + cash;
+    const busPool = Math.round(busPct/100 * total);
+    const bus1 = Math.round(bus1Pct/100 * busPool);
+    const bus2 = busPool - bus1;
+    const runner = Math.round(runnerPct/100 * total);
+    const remaining = total - busPool - runner;
+    const split = distributeEvenlyCents(remaining, state.waiters.length);
+    const rows = [
+      ['Role','Name','Amount'],
+      ['Busboy', bus1Name, (bus1/100).toFixed(2)],
+      ['Busboy', bus2Name, (bus2/100).toFixed(2)],
+      ['Runner', runnerName, (runner/100).toFixed(2)],
+      ...state.waiters.map((n,i)=>['Waiter', n, ((split.list[i]||0)/100).toFixed(2)])
+    ];
+    const csv = rows.map(r => r.map(x => '\"'+String(x).replaceAll('\"','\"\"')+'\"').join(',')).join('\\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'tip-split.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function resetAll() {
+    $('cc').value = '';
+    $('cash').value = '';
+    $('busPct').value = 15;
+    $('bus1Pct').value = 65;
+    $('runnerPct').value = 7.5;
+    $('bus1Name').value = 'Busboy 1';
+    $('bus2Name').value = 'Busboy 2';
+    $('runnerName').value = 'Food Runner';
+    state.waiters = ['Waiter 1','Waiter 2'];
+    renderWaiters();
+    recalc();
+  }
+
+  // wire up
+  ['cc','cash','busPct','bus1Pct','runnerPct','bus1Name','bus2Name','runnerName']
+    .forEach(id => $(id).addEventListener('input', recalc));
+  $('copy').addEventListener('click', copyBreakdown);
+  $('exportCsv').addEventListener('click', exportCSV);
+  $('reset').addEventListener('click', resetAll);
+  $('addWaiter').addEventListener('click', () => { state.waiters.push('Waiter ' + (state.waiters.length+1)); renderWaiters(); recalc(); });
+  $('clearWaiters').addEventListener('click', () => { state.waiters = []; renderWaiters(); recalc(); });
+
+  // restore from localStorage if present
+  (function init() {
+    renderWaiters();
+    const saved = localStorage.getItem('tipSplitState');
+    if (saved) {
+      try {
+        const s = JSON.parse(saved);
+        $('cc').value = s.cc ?? '';
+        $('cash').value = s.cash ?? '';
+        $('busPct').value = s.busPct ?? 15;
+        $('bus1Pct').value = s.bus1Pct ?? 65;
+        $('runnerPct').value = s.runnerPct ?? 7.5;
+        $('bus1Name').value = s.bus1Name ?? 'Busboy 1';
+        $('bus2Name').value = s.bus2Name ?? 'Busboy 2';
+        $('runnerName').value = s.runnerName ?? 'Food Runner';
+        if (Array.isArray(s.waiters) && s.waiters.length) state.waiters = s.waiters;
+        renderWaiters();
+      } catch {}
+    }
+    recalc();
+  })();
+</script>
+</body>
+</html>
