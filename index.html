@@ -70,10 +70,8 @@
       <label># of Bussers (1–3)</label>
       <input id="busCount" type="number" min="1" max="3" value="2">
 
-      <div class="grid cols-3" id="busserPercents">
-        <!-- dynamically rendered Busser % inputs -->
-      </div>
-      <div class="hint" id="busserHint">Bussers’ shares must sum to 100% — we’ll normalize if not.</div>
+      <div class="grid cols-3" id="busserPercents"></div>
+      <div class="hint" id="busserHint">Bussers’ shares must sum to 100% — will normalize if not.</div>
 
       <div class="row" style="margin-top:8px;">
         <input id="bartenderOn" type="checkbox" checked>
@@ -86,27 +84,29 @@
 
       <div class="row" style="margin-top:8px;">
         <input id="runnerOn" type="checkbox" checked>
-        <label for="runnerOn" style="margin:0;">Runner</label>
+        <label for="runnerOn" style="margin:0;">Runners</label>
       </div>
       <div id="runnerRow">
-        <label>Runner % of total</label>
+        <label>Runner pool % of total</label>
         <input id="runnerPct" type="number" step="0.1" value="7.5">
+
+        <label># of Runners (1–2)</label>
+        <input id="runnerCount" type="number" min="1" max="2" value="1">
+
+        <div class="grid cols-2" id="runnerPercents"></div>
+        <div class="hint" id="runnerHint">Runner shares must sum to 100% — will normalize if not.</div>
       </div>
     </div>
 
     <!-- Names -->
     <div class="card">
       <div class="section-title">Names</div>
-      <label>Busser 1</label>
-      <input id="bus1Name" type="text" value="Busser 1">
-      <label>Busser 2</label>
-      <input id="bus2Name" type="text" value="Busser 2">
-      <label>Busser 3</label>
-      <input id="bus3Name" type="text" value="Busser 3">
-      <label>Runner</label>
-      <input id="runnerName" type="text" value="Food Runner">
-      <label>Waiters (comma separated)</label>
-      <input id="waiters" type="text" value="Waiter 1, Waiter 2">
+      <label>Busser 1</label><input id="bus1Name" type="text" value="Busser 1">
+      <label>Busser 2</label><input id="bus2Name" type="text" value="Busser 2">
+      <label>Busser 3</label><input id="bus3Name" type="text" value="Busser 3">
+      <label>Runner 1</label><input id="runner1Name" type="text" value="Runner 1">
+      <label>Runner 2</label><input id="runner2Name" type="text" value="Runner 2">
+      <label>Waiters (comma separated)</label><input id="waiters" type="text" value="Waiter 1, Waiter 2">
     </div>
   </div>
 
@@ -116,49 +116,57 @@
     <div class="grid cols-4">
       <div class="metric"><div class="label">Total</div><div class="value" id="mTotal">$0.00</div></div>
       <div class="metric"><div class="label" id="mBusPoolLabel">Bussers pool</div><div class="value" id="mBusPool">$0.00</div></div>
-      <div class="metric"><div class="label" id="mRunnerLabel">Runner</div><div class="value" id="mRunner">$0.00</div></div>
+      <div class="metric"><div class="label" id="mRunnerLabel">Runners</div><div class="value" id="mRunner">$0.00</div></div>
       <div class="metric"><div class="label">Waiters pool</div><div class="value" id="mRemain">$0.00</div></div>
     </div>
-
-    <div class="grid cols-3" style="margin-top:12px;" id="busserMetrics">
-      <!-- Busser totals appear here -->
-    </div>
-
+    <div class="grid cols-3" style="margin-top:12px;" id="busserMetrics"></div>
     <div id="payoutList" style="margin-top:10px;"></div>
-
     <div class="small" id="checkLine" style="margin-top:8px;"></div>
   </div>
 </div>
 
 <script>
+function $(id){return document.getElementById(id);}
 function toCents(v){const n=parseFloat(v);return isNaN(n)?0:Math.round(n*100);}
 function fmtUSD(c){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format((c||0)/100);}
 function round50(c){const d=c/100;const r=Math.round(d*2)/2;return Math.round(r*100);}
-
-// Split `total` cents by integer weights, preserving cents and summing exactly.
 function splitByWeights(total, weights){
   const sum = weights.reduce((a,b)=>a+b,0);
   if (sum<=0) return weights.map(_=>0);
-  // First pass with floor, then distribute remainder by largest fractional parts
   const raw = weights.map(w => (total * w) / sum);
   const floors = raw.map(x => Math.floor(x));
   let rem = total - floors.reduce((a,b)=>a+b,0);
   const idxs = raw.map((x,i)=>({i, frac: x - Math.floor(x)})).sort((a,b)=>b.frac-a.frac);
-  for (let k=0; k<idxs.length && rem>0; k++){ floors[idxs[k].i]++; rem--; }
+  for (let k=0;k<idxs.length && rem>0;k++){ floors[idxs[k].i]++; rem--; }
   return floors;
 }
-
-function $(id){return document.getElementById(id);}
 
 function renderBusserPercentInputs(){
   const n = Math.max(1, Math.min(3, parseInt($('busCount').value||'1',10)));
   const host = $('busserPercents');
   host.innerHTML = '';
   for (let i=1;i<=n;i++){
-    const wrap = document.createElement('div');
-    const lab = document.createElement('label'); lab.textContent = `Busser ${i} % of busser pool`;
-    const inp = document.createElement('input'); inp.type='number'; inp.step='0.1'; inp.value = (i===1&&n===2)?65:(n===2&&i===2?35:(n===3? (i<3?33:34):100));
-    inp.id = `bus${i}Pct`;
+    const wrap=document.createElement('div');
+    const lab=document.createElement('label'); lab.textContent=`Busser ${i} % of busser pool`;
+    const inp=document.createElement('input'); inp.type='number'; inp.step='0.1';
+    inp.value=(i===1&&n===2)?65:(n===2&&i===2?35:(n===3?(i<3?33:34):100));
+    inp.id=`bus${i}Pct`;
+    wrap.appendChild(lab); wrap.appendChild(inp);
+    host.appendChild(wrap);
+    inp.addEventListener('input', recalc);
+  }
+}
+
+function renderRunnerPercentInputs(){
+  const n = Math.max(1, Math.min(2, parseInt($('runnerCount').value||'1',10)));
+  const host = $('runnerPercents');
+  host.innerHTML = '';
+  for (let i=1;i<=n;i++){
+    const wrap=document.createElement('div');
+    const lab=document.createElement('label'); lab.textContent=`Runner ${i} % of runner pool`;
+    const inp=document.createElement('input'); inp.type='number'; inp.step='0.1';
+    inp.value=(n===1?100:(i===1?50:50));
+    inp.id=`runner${i}Pct`;
     wrap.appendChild(lab); wrap.appendChild(inp);
     host.appendChild(wrap);
     inp.addEventListener('input', recalc);
@@ -166,7 +174,6 @@ function renderBusserPercentInputs(){
 }
 
 function recalc(){
-  // inputs
   const cc = toCents($('cc').value);
   let cash = toCents($('cash').value);
   const total = cc + cash;
@@ -178,152 +185,110 @@ function recalc(){
   const runnerPct = parseFloat($('runnerPct').value)||0;
 
   const busCount = Math.max(1, Math.min(3, parseInt(($('busCount').value||'1'),10)));
-  const busserWeights = [];
-  for (let i=1;i<=busCount;i++){
-    const v = parseFloat(($(`bus${i}Pct`)?.value)||0);
+  const busserWeights=[];
+  for(let i=1;i<=busCount;i++){
+    const v=parseFloat(($(`bus${i}Pct`)?.value)||0);
     busserWeights.push(Math.max(0,v));
   }
-  // normalize by using weights directly
+
   const bartender = bartenderOn ? Math.round(total * (bartenderPct/100)) : 0;
-
   const busPool = Math.round(total * (busPoolPct/100));
-  const busserTargets = splitByWeights(busPool, busserWeights);
+  const busserTargets = splitByWeights(busPool,busserWeights);
 
-  const runnerTarget = runnerOn ? Math.round(total * (runnerPct/100)) : 0;
-
-  // --- Cash-first: Busser1 -> Busser2 -> Busser3 -> Runner (if on) ---
   const busserCash = Array(busCount).fill(0);
-  for (let i=0;i<busCount;i++){
-    const need = busserTargets[i] - busserCash[i];
-    const pay = Math.min(cash, Math.max(0, need));
-    busserCash[i] += pay; cash -= pay;
+  for(let i=0;i<busCount;i++){
+    const need=busserTargets[i]-busserCash[i];
+    const pay=Math.min(cash,Math.max(0,need));
+    busserCash[i]+=pay; cash-=pay;
   }
-  let runnerCash = 0;
-  if (runnerOn && cash>0){
-    const pay = Math.min(cash, runnerTarget);
-    runnerCash += pay; cash -= pay;
-  }
-  // Any remaining cash after those flows -> waiters remainder implicitly
 
-  // Books
-  const busserBook = busserTargets.map((t,i)=> Math.max(0, t - busserCash[i]));
-  const runnerBook = Math.max(0, runnerTarget - runnerCash);
-
-  // Round bussers to nearest $0.50 (each busser’s total)
-  const busserTotals = busserTargets.map((_,i)=> round50(busserBook[i] + busserCash[i]));
+  const busserBook = busserTargets.map((t,i)=>Math.max(0,t-busserCash[i]));
+  const busserTotals = busserTargets.map((_,i)=>round50(busserBook[i]+busserCash[i]));
   const bussersSum = busserTotals.reduce((a,b)=>a+b,0);
 
-  const runnerTotal = runnerBook + runnerCash;
+  // Runners
+  const runnerCount = Math.max(1, Math.min(2, parseInt(($('runnerCount').value||'1'),10)));
+  const runnerWeights=[];
+  for(let i=1;i<=runnerCount;i++){
+    const v=parseFloat(($(`runner${i}Pct`)?.value)||0);
+    runnerWeights.push(Math.max(0,v));
+  }
+  const runnerPool = runnerOn ? Math.round(total * (runnerPct/100)) : 0;
+  const runnerTargets = splitByWeights(runnerPool,runnerWeights);
 
-  // Remaining for waiters after rounding + bartender + runner
-  const remaining = total - (bussersSum + runnerTotal + bartender);
+  const runnerCash=Array(runnerCount).fill(0);
+  for(let i=0;i<runnerCount && cash>0;i++){
+    const need=runnerTargets[i]-runnerCash[i];
+    const pay=Math.min(cash,Math.max(0,need));
+    runnerCash[i]+=pay; cash-=pay;
+  }
+  const runnerBook=runnerTargets.map((t,i)=>Math.max(0,t-runnerCash[i]));
+  const runnerTotals=runnerTargets.map((_,i)=>round50(runnerBook[i]+runnerCash[i]));
+  const runnersSum=runnerTotals.reduce((a,b)=>a+b,0);
 
-  // Waiters split
-  const waiterNames = $('waiters').value.split(',').map(x=>x.trim()).filter(Boolean);
-  const waiterSplit = (function(){
-    if (waiterNames.length===0) return {list:[], each:0};
-    const base = Math.floor(remaining / waiterNames.length);
-    let rem = remaining - base*waiterNames.length;
-    const list = Array.from({length:waiterNames.length}, (_,i)=> base + (i<rem?1:0));
-    return {list, each: base};
+  const remaining=total-(bussersSum+runnersSum+bartender);
+
+  const waiterNames=$('waiters').value.split(',').map(x=>x.trim()).filter(Boolean);
+  const waiterSplit=(function(){
+    if(waiterNames.length===0)return{list:[],each:0};
+    const base=Math.floor(remaining/waiterNames.length);
+    let rem=remaining-base*waiterNames.length;
+    const list=Array.from({length:waiterNames.length},(_,i)=>base+(i<rem?1:0));
+    return{list,each:base};
   })();
 
-  // --- Render metrics ---
-  $('mTotal').textContent = fmtUSD(total);
-  $('mBusPoolLabel').textContent = `Bussers pool (${busPoolPct}%)`;
-  $('mBusPool').textContent = fmtUSD(busPool);
-  $('mRunnerLabel').textContent = runnerOn ? `Runner (${runnerPct}%)` : 'Runner (off)';
-  $('mRunner').textContent = fmtUSD(runnerTarget);
-  $('mRemain').textContent = fmtUSD(remaining);
+  $('mTotal').textContent=fmtUSD(total);
+  $('mBusPoolLabel').textContent=`Bussers pool (${busPoolPct}%)`;
+  $('mBusPool').textContent=fmtUSD(busPool);
+  $('mRunnerLabel').textContent=runnerOn?`Runners (${runnerPct}%)`:'Runners (off)';
+  $('mRunner').textContent=fmtUSD(runnerPool);
+  $('mRemain').textContent=fmtUSD(remaining);
 
-  // Bussers block
-  const busMetrics = $('busserMetrics'); busMetrics.innerHTML = '';
-  for (let i=0;i<busCount;i++){
-    const box = document.createElement('div');
-    box.className = 'metric';
-    const name = ($(`bus${i+1}Name`)?.value)||`Busser ${i+1}`;
-    box.innerHTML = `<div class="label">${name}</div><div class="value">${fmtUSD(busserTotals[i])}</div>`;
+  const busMetrics=$('busserMetrics'); busMetrics.innerHTML='';
+  for(let i=0;i<busCount;i++){
+    const box=document.createElement('div');
+    box.className='metric';
+    const name=($(`bus${i+1}Name`)?.value)||`Busser ${i+1}`;
+    box.innerHTML=`<div class="label">${name}</div><div class="value">${fmtUSD(busserTotals[i])}</div>`;
     busMetrics.appendChild(box);
   }
 
-  // Payout list
-  const list = $('payoutList'); list.innerHTML = '';
+  const list=$('payoutList'); list.innerHTML='';
 
-  // Bartender
-  if (bartenderOn){
-    const bartDiv = document.createElement('div');
+  if(bartenderOn){
+    const bartDiv=document.createElement('div');
     bartDiv.className='pill';
-    bartDiv.innerHTML = `<div><b>Bartender</b><div class="small">${bartenderPct}% of total</div></div><div><b>${fmtUSD(bartender)}</b></div>`;
+    bartDiv.innerHTML=`<div><b>Bartender</b><div class="small">${bartenderPct}% of total</div></div><div><b>${fmtUSD(bartender)}</b></div>`;
     list.appendChild(bartDiv);
   }
 
-  // Bussers with cash/book details
-  for (let i=0;i<busCount;i++){
-    const name = ($(`bus${i+1}Name`)?.value)||`Busser ${i+1}`;
-    const row = document.createElement('div');
+  for(let i=0;i<busCount;i++){
+    const name=($(`bus${i+1}Name`)?.value)||`Busser ${i+1}`;
+    const row=document.createElement('div');
     row.className='pill';
-    row.innerHTML = `<div><b>${name}</b><div class="small">Cash: ${fmtUSD(busserCash[i])} + Book: ${fmtUSD(busserBook[i])}</div></div><div><b>${fmtUSD(busserTotals[i])}</b></div>`;
+    row.innerHTML=`<div><b>${name}</b><div class="small">Cash: ${fmtUSD(busserCash[i])} + Book: ${fmtUSD(busserBook[i])}</div></div><div><b>${fmtUSD(busserTotals[i])}</b></div>`;
     list.appendChild(row);
   }
 
-  // Runner row (with cash/book) even if off show 0
-  const runRow = document.createElement('div');
-  runRow.className='pill';
-  runRow.innerHTML = `<div><b>${$('runnerName').value || 'Food Runner'}</b><div class="small">Cash: ${fmtUSD(runnerCash)} + Book: ${fmtUSD(runnerBook)}</div></div><div><b>${fmtUSD(runnerTotal)}</b></div>`;
-  list.appendChild(runRow);
+  for(let i=0;i<runnerCount;i++){
+    const name=($(`runner${i+1}Name`)?.value)||`Runner ${i+1}`;
+    const row=document.createElement('div');
+    row.className='pill';
+    row.innerHTML=`<div><b>${name}</b><div class="small">Cash: ${fmtUSD(runnerCash[i])} + Book: ${fmtUSD(runnerBook[i])}</div></div><div><b>${fmtUSD(runnerTotals[i])}</b></div>`;
+    list.appendChild(row);
+  }
 
-  // Waiters
   waiterNames.forEach((n,i)=>{
-    const cents = waiterSplit.list[i]||0;
-    const d = document.createElement('div');
+    const cents=waiterSplit.list[i]||0;
+    const d=document.createElement('div');
     d.className='pill';
-    d.innerHTML = `<div><b>${n}</b><div class="small">Equal share</div></div><div><b>${fmtUSD(cents)}</b></div>`;
+    d.innerHTML=`<div><b>${n}</b><div class="small">Equal share</div></div><div><b>${fmtUSD(cents)}</b></div>`;
     list.appendChild(d);
   });
 
-  // Check line
-  const sum = bussersSum + bartender + runnerTotal + waiterSplit.list.reduce((a,b)=>a+b,0);
-  $('checkLine').textContent = `Check: ${fmtUSD(sum)} = ${fmtUSD(total)}`;
+  const sum=bussersSum+bartender+runnersSum+waiterSplit.list.reduce((a,b)=>a+b,0);
+  $('checkLine').textContent=`Check: ${fmtUSD(sum)} = ${fmtUSD(total)}`;
 }
 
-// wiring
-['cc','cash','busPoolPct','busCount','bartenderOn','bartenderPct','runnerOn','runnerPct','bus1Name','bus2Name','bus3Name','runnerName','waiters']
-  .forEach(id => $(id).addEventListener('input', recalc));
-
-$('bartenderOn').addEventListener('change', ()=>{
-  $('bartenderRow').style.display = $('bartenderOn').checked ? '' : 'none';
-  recalc();
-});
-$('runnerOn').addEventListener('change', ()=>{
-  $('runnerRow').style.display = $('runnerOn').checked ? '' : 'none';
-  recalc();
-});
-
-$('busCount').addEventListener('input', ()=>{
-  renderBusserPercentInputs();
-  recalc();
-});
-
-function copyBreakdown(){ navigator.clipboard.writeText(document.body.innerText); alert('Copied breakdown.'); }
-function resetAll(){
-  document.querySelectorAll('input[type="number"]').forEach(i=> i.value = i.id==='busCount' ? i.value : '');
-  $('busPoolPct').value = 15;
-  $('busCount').value = 2;
-  $('bartenderOn').checked = true; $('bartenderPct').value = 5;
-  $('runnerOn').checked = true; $('runnerPct').value = 7.5;
-  $('waiters').value = 'Waiter 1, Waiter 2';
-  $('bus1Name').value='Busser 1'; $('bus2Name').value='Busser 2'; $('bus3Name').value='Busser 3';
-  renderBusserPercentInputs();
-  recalc();
-}
-
-// init
-renderBusserPercentInputs();
-$('bartenderRow').style.display = $('bartenderOn').checked ? '' : 'none';
-$('runnerRow').style.display = $('runnerOn').checked ? '' : 'none';
-recalc();
-
-if('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js'); }
-</script>
-</body>
-</html>
+['cc','cash','busPoolPct','busCount','bartenderOn','bartenderPct','runnerOn','runnerPct','bus1Name','bus2Name','bus3Name','runner1Name','runner2Name','waiters']
+.for
