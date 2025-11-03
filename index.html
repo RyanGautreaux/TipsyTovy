@@ -83,7 +83,6 @@
 function $(id){return document.getElementById(id);}
 function toCents(v){const n=parseFloat(v);return isNaN(n)?0:Math.round(n*100);}
 function fmtUSD(c){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format((c||0)/100);}
-function round50(c){const d=c/100;const r=Math.round(d*2)/2;return Math.round(r*100);}
 function splitByWeights(total,weights){const s=weights.reduce((a,b)=>a+b,0);if(s<=0)return weights.map(_=>0);const raw=weights.map(w=>total*w/s);const f=raw.map(x=>Math.floor(x));let rem=total-f.reduce((a,b)=>a+b,0);const idx=raw.map((x,i)=>({i,frac:x-Math.floor(x)})).sort((a,b)=>b.frac-a.frac);for(let k=0;k<idx.length&&rem>0;k++){f[idx[k].i]++;rem--;}return f;}
 
 function renderBusserPercentInputs(){
@@ -123,7 +122,7 @@ function recalc(){
   const busCash=Array(busCount).fill(0);
   for(let i=0;i<busCount;i++){const need=busTargets[i]-busCash[i];const pay=Math.min(cash,Math.max(0,need));busCash[i]+=pay;cash-=pay;}
   const busBook=busTargets.map((t,i)=>Math.max(0,t-busCash[i]));
-  const busTotals=busTargets.map((_,i)=>round50(busBook[i]+busCash[i]));
+  const busTotals=busTargets.map((_,i)=>busBook[i]+busCash[i]);
   const bussersSum=busTotals.reduce((a,b)=>a+b,0);
 
   // Runners
@@ -133,14 +132,13 @@ function recalc(){
   const rCash=Array(runnerCount).fill(0);
   for(let i=0;i<runnerCount&&cash>0;i++){const need=rTargets[i]-rCash[i];const pay=Math.min(cash,Math.max(0,need));rCash[i]+=pay;cash-=pay;}
   const rBook=rTargets.map((t,i)=>Math.max(0,t-rCash[i]));
-  const rTotals=rTargets.map((_,i)=>round50(rBook[i]+rCash[i]));
+  const rTotals=rTargets.map((_,i)=>rBook[i]+rCash[i]);
   const runnersSum=rTotals.reduce((a,b)=>a+b,0);
 
   const remain=total-(bussersSum+runnersSum+bartender);
   const waiterNames=$('waiters').value.split(',').map(x=>x.trim()).filter(Boolean);
   const waiterSplit=(function(){if(waiterNames.length===0)return{list:[],each:0};const base=Math.floor(remain/waiterNames.length);let rem=remain-base*waiterNames.length;const list=Array.from({length:waiterNames.length},(_,i)=>base+(i<rem?1:0));return{list};})();
   
-  // Display
   $('mTotal').textContent=fmtUSD(total);
   $('mBusPool').textContent=fmtUSD(busPool);
   $('mRunner').textContent=fmtUSD(runnerPool);
@@ -167,7 +165,6 @@ $('runnerOn').addEventListener('change',()=>{$('runnerRow').style.display=$('run
 
 function copyBreakdown(){navigator.clipboard.writeText(document.body.innerText);alert('Copied breakdown.');}
 function resetAll(){location.reload();}
-
 renderBusserPercentInputs();renderRunnerPercentInputs();recalc();
 </script>
 </body>
