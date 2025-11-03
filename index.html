@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TipSplit</title>
 <meta name="theme-color" content="#00a86b">
-<link rel="manifest" href="manifest.json">
 <style>
   :root {
     --green: #00a86b;
@@ -41,17 +40,10 @@
 <div class="container">
   <h1>TipSplit 💚</h1>
 
-  <!-- Totals -->
   <div class="card">
     <div class="grid cols-3">
-      <div>
-        <label>Credit Card Tips ($)</label>
-        <input id="cc" type="number" step="0.01" min="0" placeholder="0.00">
-      </div>
-      <div>
-        <label>Cash Tips ($)</label>
-        <input id="cash" type="number" step="0.01" min="0" placeholder="0.00">
-      </div>
+      <div><label>Credit Card Tips ($)</label><input id="cc" type="number" step="0.01" min="0"></div>
+      <div><label>Cash Tips ($)</label><input id="cash" type="number" step="0.01" min="0"></div>
       <div class="row" style="align-items:end;">
         <button class="btn" onclick="copyBreakdown()">Copy</button>
         <button class="btn ghost" onclick="resetAll()">Reset</button>
@@ -60,7 +52,6 @@
   </div>
 
   <div class="grid cols-2" style="margin-top:12px;">
-    <!-- Roles / Percents -->
     <div class="card">
       <div class="section-title">Roles & Percentages</div>
 
@@ -69,13 +60,10 @@
 
       <label># of Bussers (1–3)</label>
       <input id="busCount" type="number" min="1" max="3" value="2">
-
       <div class="grid cols-3" id="busserPercents"></div>
-      <div class="hint" id="busserHint">Bussers’ shares must sum to 100% — will normalize if not.</div>
 
       <div class="row" style="margin-top:8px;">
-        <input id="bartenderOn" type="checkbox" checked>
-        <label for="bartenderOn" style="margin:0;">Bartender</label>
+        <input id="bartenderOn" type="checkbox" checked><label for="bartenderOn" style="margin:0;">Bartender</label>
       </div>
       <div id="bartenderRow">
         <label>Bartender % of total</label>
@@ -83,8 +71,7 @@
       </div>
 
       <div class="row" style="margin-top:8px;">
-        <input id="runnerOn" type="checkbox" checked>
-        <label for="runnerOn" style="margin:0;">Runners</label>
+        <input id="runnerOn" type="checkbox" checked><label for="runnerOn" style="margin:0;">Runners</label>
       </div>
       <div id="runnerRow">
         <label>Runner pool % of total</label>
@@ -92,13 +79,10 @@
 
         <label># of Runners (1–2)</label>
         <input id="runnerCount" type="number" min="1" max="2" value="1">
-
         <div class="grid cols-2" id="runnerPercents"></div>
-        <div class="hint" id="runnerHint">Runner shares must sum to 100% — will normalize if not.</div>
       </div>
     </div>
 
-    <!-- Names -->
     <div class="card">
       <div class="section-title">Names</div>
       <label>Busser 1</label><input id="bus1Name" type="text" value="Busser 1">
@@ -110,7 +94,6 @@
     </div>
   </div>
 
-  <!-- Results -->
   <div class="card" style="margin-top:12px;">
     <div class="section-title">Results</div>
     <div class="grid cols-4">
@@ -119,7 +102,7 @@
       <div class="metric"><div class="label" id="mRunnerLabel">Runners</div><div class="value" id="mRunner">$0.00</div></div>
       <div class="metric"><div class="label">Waiters pool</div><div class="value" id="mRemain">$0.00</div></div>
     </div>
-    <div class="grid cols-3" style="margin-top:12px;" id="busserMetrics"></div>
+    <div class="grid cols-3" id="busserMetrics" style="margin-top:12px;"></div>
     <div id="payoutList" style="margin-top:10px;"></div>
     <div class="small" id="checkLine" style="margin-top:8px;"></div>
   </div>
@@ -131,164 +114,77 @@ function toCents(v){const n=parseFloat(v);return isNaN(n)?0:Math.round(n*100);}
 function fmtUSD(c){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format((c||0)/100);}
 function round50(c){const d=c/100;const r=Math.round(d*2)/2;return Math.round(r*100);}
 function splitByWeights(total, weights){
-  const sum = weights.reduce((a,b)=>a+b,0);
-  if (sum<=0) return weights.map(_=>0);
-  const raw = weights.map(w => (total * w) / sum);
-  const floors = raw.map(x => Math.floor(x));
-  let rem = total - floors.reduce((a,b)=>a+b,0);
-  const idxs = raw.map((x,i)=>({i, frac: x - Math.floor(x)})).sort((a,b)=>b.frac-a.frac);
-  for (let k=0;k<idxs.length && rem>0;k++){ floors[idxs[k].i]++; rem--; }
+  const sum=weights.reduce((a,b)=>a+b,0); if(sum<=0)return weights.map(_=>0);
+  const raw=weights.map(w=>(total*w)/sum); const floors=raw.map(x=>Math.floor(x));
+  let rem=total-floors.reduce((a,b)=>a+b,0);
+  const idxs=raw.map((x,i)=>({i,frac:x-Math.floor(x)})).sort((a,b)=>b.frac-a.frac);
+  for(let k=0;k<idxs.length&&rem>0;k++){floors[idxs[k].i]++;rem--;}
   return floors;
 }
-
 function renderBusserPercentInputs(){
-  const n = Math.max(1, Math.min(3, parseInt($('busCount').value||'1',10)));
-  const host = $('busserPercents');
-  host.innerHTML = '';
-  for (let i=1;i<=n;i++){
-    const wrap=document.createElement('div');
-    const lab=document.createElement('label'); lab.textContent=`Busser ${i} % of busser pool`;
+  const n=Math.max(1,Math.min(3,parseInt($('busCount').value||'1',10)));
+  const host=$('busserPercents'); host.innerHTML='';
+  for(let i=1;i<=n;i++){
+    const lab=document.createElement('label'); lab.textContent=`Busser ${i} % of pool`;
     const inp=document.createElement('input'); inp.type='number'; inp.step='0.1';
-    inp.value=(i===1&&n===2)?65:(n===2&&i===2?35:(n===3?(i<3?33:34):100));
+    inp.value=(n===1?100:(n===2?(i===1?65:35):(i<3?33:34)));
     inp.id=`bus${i}Pct`;
-    wrap.appendChild(lab); wrap.appendChild(inp);
-    host.appendChild(wrap);
-    inp.addEventListener('input', recalc);
+    lab.appendChild(inp); host.appendChild(lab);
+    inp.addEventListener('input',recalc);
   }
 }
-
 function renderRunnerPercentInputs(){
-  const n = Math.max(1, Math.min(2, parseInt($('runnerCount').value||'1',10)));
-  const host = $('runnerPercents');
-  host.innerHTML = '';
-  for (let i=1;i<=n;i++){
-    const wrap=document.createElement('div');
-    const lab=document.createElement('label'); lab.textContent=`Runner ${i} % of runner pool`;
+  const n=Math.max(1,Math.min(2,parseInt($('runnerCount').value||'1',10)));
+  const host=$('runnerPercents'); host.innerHTML='';
+  for(let i=1;i<=n;i++){
+    const lab=document.createElement('label'); lab.textContent=`Runner ${i} % of pool`;
     const inp=document.createElement('input'); inp.type='number'; inp.step='0.1';
     inp.value=(n===1?100:(i===1?50:50));
     inp.id=`runner${i}Pct`;
-    wrap.appendChild(lab); wrap.appendChild(inp);
-    host.appendChild(wrap);
-    inp.addEventListener('input', recalc);
+    lab.appendChild(inp); host.appendChild(lab);
+    inp.addEventListener('input',recalc);
   }
 }
-
 function recalc(){
-  const cc = toCents($('cc').value);
-  let cash = toCents($('cash').value);
-  const total = cc + cash;
-
-  const busPoolPct = parseFloat($('busPoolPct').value)||0;
-  const bartenderOn = $('bartenderOn').checked;
-  const bartenderPct = parseFloat($('bartenderPct').value)||0;
-  const runnerOn = $('runnerOn').checked;
-  const runnerPct = parseFloat($('runnerPct').value)||0;
-
-  const busCount = Math.max(1, Math.min(3, parseInt(($('busCount').value||'1'),10)));
-  const busserWeights=[];
-  for(let i=1;i<=busCount;i++){
-    const v=parseFloat(($(`bus${i}Pct`)?.value)||0);
-    busserWeights.push(Math.max(0,v));
-  }
-
-  const bartender = bartenderOn ? Math.round(total * (bartenderPct/100)) : 0;
-  const busPool = Math.round(total * (busPoolPct/100));
-  const busserTargets = splitByWeights(busPool,busserWeights);
-
-  const busserCash = Array(busCount).fill(0);
-  for(let i=0;i<busCount;i++){
-    const need=busserTargets[i]-busserCash[i];
-    const pay=Math.min(cash,Math.max(0,need));
-    busserCash[i]+=pay; cash-=pay;
-  }
-
-  const busserBook = busserTargets.map((t,i)=>Math.max(0,t-busserCash[i]));
-  const busserTotals = busserTargets.map((_,i)=>round50(busserBook[i]+busserCash[i]));
-  const bussersSum = busserTotals.reduce((a,b)=>a+b,0);
-
-  // Runners
-  const runnerCount = Math.max(1, Math.min(2, parseInt(($('runnerCount').value||'1'),10)));
-  const runnerWeights=[];
-  for(let i=1;i<=runnerCount;i++){
-    const v=parseFloat(($(`runner${i}Pct`)?.value)||0);
-    runnerWeights.push(Math.max(0,v));
-  }
-  const runnerPool = runnerOn ? Math.round(total * (runnerPct/100)) : 0;
-  const runnerTargets = splitByWeights(runnerPool,runnerWeights);
-
-  const runnerCash=Array(runnerCount).fill(0);
-  for(let i=0;i<runnerCount && cash>0;i++){
-    const need=runnerTargets[i]-runnerCash[i];
-    const pay=Math.min(cash,Math.max(0,need));
-    runnerCash[i]+=pay; cash-=pay;
-  }
-  const runnerBook=runnerTargets.map((t,i)=>Math.max(0,t-runnerCash[i]));
-  const runnerTotals=runnerTargets.map((_,i)=>round50(runnerBook[i]+runnerCash[i]));
-  const runnersSum=runnerTotals.reduce((a,b)=>a+b,0);
-
-  const remaining=total-(bussersSum+runnersSum+bartender);
-
+  const cc=toCents($('cc').value); let cash=toCents($('cash').value); const total=cc+cash;
+  const busPoolPct=parseFloat($('busPoolPct').value)||0;
+  const bartenderOn=$('bartenderOn').checked; const bartenderPct=parseFloat($('bartenderPct').value)||0;
+  const runnerOn=$('runnerOn').checked; const runnerPct=parseFloat($('runnerPct').value)||0;
+  const busCount=Math.max(1,Math.min(3,parseInt($('busCount').value||'1',10)));
+  const busWeights=[]; for(let i=1;i<=busCount;i++){busWeights.push(parseFloat(($(`bus${i}Pct`)?.value)||0));}
+  const bartender=bartenderOn?Math.round(total*(bartenderPct/100)):0;
+  const busPool=Math.round(total*(busPoolPct/100)); const busTargets=splitByWeights(busPool,busWeights);
+  const busCash=Array(busCount).fill(0);
+  for(let i=0;i<busCount;i++){const need=busTargets[i]-busCash[i];const pay=Math.min(cash,Math.max(0,need));busCash[i]+=pay;cash-=pay;}
+  const busBook=busTargets.map((t,i)=>Math.max(0,t-busCash[i])); const busTotals=busTargets.map((_,i)=>round50(busBook[i]+busCash[i])); const busSum=busTotals.reduce((a,b)=>a+b,0);
+  const runnerCount=Math.max(1,Math.min(2,parseInt($('runnerCount').value||'1',10))); const rWeights=[];
+  for(let i=1;i<=runnerCount;i++){rWeights.push(parseFloat(($(`runner${i}Pct`)?.value)||0));}
+  const runnerPool=runnerOn?Math.round(total*(runnerPct/100)):0; const rTargets=splitByWeights(runnerPool,rWeights);
+  const rCash=Array(runnerCount).fill(0);
+  for(let i=0;i<runnerCount&&cash>0;i++){const need=rTargets[i]-rCash[i];const pay=Math.min(cash,Math.max(0,need));rCash[i]+=pay;cash-=pay;}
+  const rBook=rTargets.map((t,i)=>Math.max(0,t-rCash[i])); const rTotals=rTargets.map((_,i)=>round50(rBook[i]+rCash[i])); const rSum=rTotals.reduce((a,b)=>a+b,0);
+  const remain=total-(busSum+rSum+bartender);
   const waiterNames=$('waiters').value.split(',').map(x=>x.trim()).filter(Boolean);
-  const waiterSplit=(function(){
-    if(waiterNames.length===0)return{list:[],each:0};
-    const base=Math.floor(remaining/waiterNames.length);
-    let rem=remaining-base*waiterNames.length;
-    const list=Array.from({length:waiterNames.length},(_,i)=>base+(i<rem?1:0));
-    return{list,each:base};
-  })();
-
-  $('mTotal').textContent=fmtUSD(total);
-  $('mBusPoolLabel').textContent=`Bussers pool (${busPoolPct}%)`;
-  $('mBusPool').textContent=fmtUSD(busPool);
-  $('mRunnerLabel').textContent=runnerOn?`Runners (${runnerPct}%)`:'Runners (off)';
-  $('mRunner').textContent=fmtUSD(runnerPool);
-  $('mRemain').textContent=fmtUSD(remaining);
-
-  const busMetrics=$('busserMetrics'); busMetrics.innerHTML='';
-  for(let i=0;i<busCount;i++){
-    const box=document.createElement('div');
-    box.className='metric';
-    const name=($(`bus${i+1}Name`)?.value)||`Busser ${i+1}`;
-    box.innerHTML=`<div class="label">${name}</div><div class="value">${fmtUSD(busserTotals[i])}</div>`;
-    busMetrics.appendChild(box);
-  }
-
+  const waiterSplit=(function(){if(waiterNames.length===0)return{list:[],each:0};const base=Math.floor(remain/waiterNames.length);let rem=remain-base*waiterNames.length;return{list:Array.from({length:waiterNames.length},(_,i)=>base+(i<rem?1:0))};})();
+  $('mTotal').textContent=fmtUSD(total); $('mBusPool').textContent=fmtUSD(busPool); $('mRunner').textContent=fmtUSD(runnerPool); $('mRemain').textContent=fmtUSD(remain);
+  const metrics=$('busserMetrics'); metrics.innerHTML='';
+  for(let i=0;i<busCount;i++){const div=document.createElement('div');div.className='metric';const name=$(`bus${i+1}Name`).value;div.innerHTML=`<div class="label">${name}</div><div class="value">${fmtUSD(busTotals[i])}</div>`;metrics.appendChild(div);}
   const list=$('payoutList'); list.innerHTML='';
-
-  if(bartenderOn){
-    const bartDiv=document.createElement('div');
-    bartDiv.className='pill';
-    bartDiv.innerHTML=`<div><b>Bartender</b><div class="small">${bartenderPct}% of total</div></div><div><b>${fmtUSD(bartender)}</b></div>`;
-    list.appendChild(bartDiv);
-  }
-
-  for(let i=0;i<busCount;i++){
-    const name=($(`bus${i+1}Name`)?.value)||`Busser ${i+1}`;
-    const row=document.createElement('div');
-    row.className='pill';
-    row.innerHTML=`<div><b>${name}</b><div class="small">Cash: ${fmtUSD(busserCash[i])} + Book: ${fmtUSD(busserBook[i])}</div></div><div><b>${fmtUSD(busserTotals[i])}</b></div>`;
-    list.appendChild(row);
-  }
-
-  for(let i=0;i<runnerCount;i++){
-    const name=($(`runner${i+1}Name`)?.value)||`Runner ${i+1}`;
-    const row=document.createElement('div');
-    row.className='pill';
-    row.innerHTML=`<div><b>${name}</b><div class="small">Cash: ${fmtUSD(runnerCash[i])} + Book: ${fmtUSD(runnerBook[i])}</div></div><div><b>${fmtUSD(runnerTotals[i])}</b></div>`;
-    list.appendChild(row);
-  }
-
-  waiterNames.forEach((n,i)=>{
-    const cents=waiterSplit.list[i]||0;
-    const d=document.createElement('div');
-    d.className='pill';
-    d.innerHTML=`<div><b>${n}</b><div class="small">Equal share</div></div><div><b>${fmtUSD(cents)}</b></div>`;
-    list.appendChild(d);
-  });
-
-  const sum=bussersSum+bartender+runnersSum+waiterSplit.list.reduce((a,b)=>a+b,0);
-  $('checkLine').textContent=`Check: ${fmtUSD(sum)} = ${fmtUSD(total)}`;
+  if(bartenderOn){list.innerHTML+=`<div class="pill"><div><b>Bartender</b><div class="small">${bartenderPct}%</div></div><div><b>${fmtUSD(bartender)}</b></div></div>`;}
+  for(let i=0;i<busCount;i++){const name=$(`bus${i+1}Name`).value;list.innerHTML+=`<div class="pill"><div><b>${name}</b><div class="small">Cash: ${fmtUSD(busCash[i])} + Book: ${fmtUSD(busBook[i])}</div></div><div><b>${fmtUSD(busTotals[i])}</b></div></div>`;}
+  for(let i=0;i<runnerCount;i++){const name=$(`runner${i+1}Name`).value;list.innerHTML+=`<div class="pill"><div><b>${name}</b><div class="small">Cash: ${fmtUSD(rCash[i])} + Book: ${fmtUSD(rBook[i])}</div></div><div><b>${fmtUSD(rTotals[i])}</b></div></div>`;}
+  waiterNames.forEach((n,i)=>{list.innerHTML+=`<div class="pill"><div><b>${n}</b><div class="small">Equal share</div></div><div><b>${fmtUSD(waiterSplit.list[i])}</b></div></div>`;});
+  const sum=busSum+rSum+bartender+waiterSplit.list.reduce((a,b)=>a+b,0); $('checkLine').textContent=`Check: ${fmtUSD(sum)} = ${fmtUSD(total)}`;
 }
+['cc','cash','busPoolPct','busCount','bartenderOn','bartenderPct','runnerOn','runnerPct','runnerCount','bus1Name','bus2Name','bus3Name','runner1Name','runner2Name','waiters'].forEach(id=>$(id).addEventListener('input',recalc));
+$('busCount').addEventListener('input',()=>{renderBusserPercentInputs();recalc();});
+$('runnerCount').addEventListener('input',()=>{renderRunnerPercentInputs();recalc();});
+$('bartenderOn').addEventListener('change',()=>{$('bartenderRow').style.display=$('bartenderOn').checked?'':'none';recalc();});
+$('runnerOn').addEventListener('change',()=>{$('runnerRow').style.display=$('runnerOn').checked?'':'none';recalc();});
+function copyBreakdown(){navigator.clipboard.writeText(document.body.innerText);alert('Copied breakdown.');}
+function resetAll(){location.reload();}
+renderBusserPercentInputs(); renderRunnerPercentInputs(); recalc();
+</script>
+</body>
+</html>
 
-['cc','cash','busPoolPct','busCount','bartenderOn','bartenderPct','runnerOn','runnerPct','bus1Name','bus2Name','bus3Name','runner1Name','runner2Name','waiters']
-.for
