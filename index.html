@@ -9,88 +9,39 @@
 <style>
   :root {
     --green: #00a86b;
-    --bg: #f9fafb;
+    --bg: #f6f7f9;
     --white: #fff;
     --text: #111;
     --muted: #666;
-    --border: #ddd;
+    --border: #e4e6ea;
   }
-  body {
-    margin:0;
-    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-  }
-  .container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 16px;
-  }
-  h1 {
-    font-size: 1.8rem;
-    color: var(--green);
-    text-align: center;
-  }
-  .card {
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 16px;
-    margin-top: 12px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  }
-  label {
-    font-size: 0.85rem;
-    color: var(--muted);
-  }
-  input {
-    width: 100%;
-    padding: 10px;
-    margin-top: 4px;
-    margin-bottom: 12px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    font-size: 1rem;
-  }
-  button {
-    background: var(--green);
-    color: #fff;
-    border: none;
-    padding: 10px 14px;
-    border-radius: 12px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  button:hover { opacity: 0.9; }
-  .grid { display: grid; gap: 12px; }
-  @media(min-width:720px) {
-    .grid.cols-2 { grid-template-columns: repeat(2,1fr); }
-    .grid.cols-3 { grid-template-columns: repeat(3,1fr); }
-  }
-  .metric {
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 12px;
-    text-align:center;
-  }
-  .metric .label { font-size: 0.8rem; color: var(--muted); }
-  .metric .value { font-weight: 700; font-size: 1.1rem; color: var(--green); }
-  .pill {
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    background: #fff;
-    padding: 10px 12px;
-    display:flex;
-    justify-content: space-between;
-    align-items:center;
-  }
-  .small { font-size:0.8rem; color:var(--muted); }
+  body { margin:0; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); }
+  .container { max-width: 1000px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 1.9rem; color: var(--green); text-align: center; margin: 6px 0 12px; }
+  .card { background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+  label { font-size: 0.85rem; color: var(--muted); display:block; }
+  input[type="number"], input[type="text"] { width: 100%; padding: 10px; margin-top: 4px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 12px; font-size: 1rem; }
+  input[type="checkbox"] { transform: scale(1.2); margin-right: 8px; }
+  .row { display:flex; gap:8px; align-items:center; }
+  .btn { background: var(--green); color: #fff; border: none; padding: 10px 14px; border-radius: 12px; font-weight: 600; cursor: pointer; }
+  .btn.ghost { background:#d0d5db; color:#111; }
+  .btn:hover { opacity: .92; }
+  .grid { display:grid; gap:12px; }
+  @media (min-width: 760px) { .grid.cols-2 { grid-template-columns: repeat(2,1fr); } .grid.cols-3 { grid-template-columns: repeat(3,1fr); } .grid.cols-4 { grid-template-columns: repeat(4,1fr); } }
+  .metric { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 12px; text-align:center; }
+  .metric .label { font-size: .8rem; color: var(--muted); }
+  .metric .value { font-weight: 800; font-size: 1.1rem; color: var(--green); }
+  .pill { border: 1px solid var(--border); border-radius: 16px; background:#fff; padding: 10px 12px; display:flex; justify-content:space-between; align-items:center; }
+  .small { font-size:.8rem; color:var(--muted); }
+  .hint { font-size:.8rem; color:var(--muted); margin-top:-6px; }
+  .section-title { font-weight:700; margin: 0 0 6px; }
 </style>
 </head>
 <body>
 <div class="container">
   <h1>TipSplit 💚</h1>
+
+  <!-- Totals -->
   <div class="card">
     <div class="grid cols-3">
       <div>
@@ -101,30 +52,57 @@
         <label>Cash Tips ($)</label>
         <input id="cash" type="number" step="0.01" min="0" placeholder="0.00">
       </div>
-      <div style="display:flex;align-items:end;gap:8px;">
-        <button onclick="copyBreakdown()">Copy</button>
-        <button onclick="resetAll()" style="background:#ccc;color:#000;">Reset</button>
+      <div class="row" style="align-items:end;">
+        <button class="btn" onclick="copyBreakdown()">Copy</button>
+        <button class="btn ghost" onclick="resetAll()">Reset</button>
       </div>
     </div>
   </div>
 
-  <div class="grid cols-2">
+  <div class="grid cols-2" style="margin-top:12px;">
+    <!-- Roles / Percents -->
     <div class="card">
-      <h3 style="margin-top:0;">Percentages</h3>
-      <label>Busboys %</label>
-      <input id="busPct" type="number" step="0.1" value="15">
-      <label>Busboy 1 % of bus pool</label>
-      <input id="bus1Pct" type="number" step="0.1" value="65">
-      <label>Runner %</label>
-      <input id="runnerPct" type="number" step="0.1" value="7.5">
+      <div class="section-title">Roles & Percentages</div>
+
+      <label>Busser pool % of total</label>
+      <input id="busPoolPct" type="number" step="0.1" value="15">
+
+      <label># of Bussers (1–3)</label>
+      <input id="busCount" type="number" min="1" max="3" value="2">
+
+      <div class="grid cols-3" id="busserPercents">
+        <!-- dynamically rendered Busser % inputs -->
+      </div>
+      <div class="hint" id="busserHint">Bussers’ shares must sum to 100% — we’ll normalize if not.</div>
+
+      <div class="row" style="margin-top:8px;">
+        <input id="bartenderOn" type="checkbox" checked>
+        <label for="bartenderOn" style="margin:0;">Bartender</label>
+      </div>
+      <div id="bartenderRow">
+        <label>Bartender % of total</label>
+        <input id="bartenderPct" type="number" step="0.1" value="5">
+      </div>
+
+      <div class="row" style="margin-top:8px;">
+        <input id="runnerOn" type="checkbox" checked>
+        <label for="runnerOn" style="margin:0;">Runner</label>
+      </div>
+      <div id="runnerRow">
+        <label>Runner % of total</label>
+        <input id="runnerPct" type="number" step="0.1" value="7.5">
+      </div>
     </div>
 
+    <!-- Names -->
     <div class="card">
-      <h3 style="margin-top:0;">Names</h3>
-      <label>Busboy 1</label>
-      <input id="bus1Name" type="text" value="Busboy 1">
-      <label>Busboy 2</label>
-      <input id="bus2Name" type="text" value="Busboy 2">
+      <div class="section-title">Names</div>
+      <label>Busser 1</label>
+      <input id="bus1Name" type="text" value="Busser 1">
+      <label>Busser 2</label>
+      <input id="bus2Name" type="text" value="Busser 2">
+      <label>Busser 3</label>
+      <input id="bus3Name" type="text" value="Busser 3">
       <label>Runner</label>
       <input id="runnerName" type="text" value="Food Runner">
       <label>Waiters (comma separated)</label>
@@ -132,140 +110,220 @@
     </div>
   </div>
 
-  <div class="card">
-    <h3 style="margin-top:0;">Results</h3>
-    <div class="grid cols-3">
+  <!-- Results -->
+  <div class="card" style="margin-top:12px;">
+    <div class="section-title">Results</div>
+    <div class="grid cols-4">
       <div class="metric"><div class="label">Total</div><div class="value" id="mTotal">$0.00</div></div>
-      <div class="metric"><div class="label">Busboys</div><div class="value" id="mBus">$0.00</div></div>
-      <div class="metric"><div class="label">Runner</div><div class="value" id="mRunner">$0.00</div></div>
-    </div>
-    <div class="grid cols-3">
-      <div class="metric"><div class="label" id="mBus1Label">Busboy 1</div><div class="value" id="mBus1">$0.00</div></div>
-      <div class="metric"><div class="label" id="mBus2Label">Busboy 2</div><div class="value" id="mBus2">$0.00</div></div>
+      <div class="metric"><div class="label" id="mBusPoolLabel">Bussers pool</div><div class="value" id="mBusPool">$0.00</div></div>
+      <div class="metric"><div class="label" id="mRunnerLabel">Runner</div><div class="value" id="mRunner">$0.00</div></div>
       <div class="metric"><div class="label">Waiters pool</div><div class="value" id="mRemain">$0.00</div></div>
     </div>
-    <div id="waiterPayouts"></div>
-    <div class="small" id="checkLine"></div>
+
+    <div class="grid cols-3" style="margin-top:12px;" id="busserMetrics">
+      <!-- Busser totals appear here -->
+    </div>
+
+    <div id="payoutList" style="margin-top:10px;"></div>
+
+    <div class="small" id="checkLine" style="margin-top:8px;"></div>
   </div>
 </div>
+
 <script>
 function toCents(v){const n=parseFloat(v);return isNaN(n)?0:Math.round(n*100);}
-function fmtUSD(c){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(c/100);}
+function fmtUSD(c){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format((c||0)/100);}
 function round50(c){const d=c/100;const r=Math.round(d*2)/2;return Math.round(r*100);}
-function distributeEvenly(total,n){
-  if(n<=0)return {each:0,list:[]};
-  const base=Math.floor(total/n);
-  let rem=total-base*n;
-  return {each:base,list:Array.from({length:n},(_,i)=>base+(i<rem?1:0))};
+
+// Split `total` cents by integer weights, preserving cents and summing exactly.
+function splitByWeights(total, weights){
+  const sum = weights.reduce((a,b)=>a+b,0);
+  if (sum<=0) return weights.map(_=>0);
+  // First pass with floor, then distribute remainder by largest fractional parts
+  const raw = weights.map(w => (total * w) / sum);
+  const floors = raw.map(x => Math.floor(x));
+  let rem = total - floors.reduce((a,b)=>a+b,0);
+  const idxs = raw.map((x,i)=>({i, frac: x - Math.floor(x)})).sort((a,b)=>b.frac-a.frac);
+  for (let k=0; k<idxs.length && rem>0; k++){ floors[idxs[k].i]++; rem--; }
+  return floors;
+}
+
+function $(id){return document.getElementById(id);}
+
+function renderBusserPercentInputs(){
+  const n = Math.max(1, Math.min(3, parseInt($('busCount').value||'1',10)));
+  const host = $('busserPercents');
+  host.innerHTML = '';
+  for (let i=1;i<=n;i++){
+    const wrap = document.createElement('div');
+    const lab = document.createElement('label'); lab.textContent = `Busser ${i} % of busser pool`;
+    const inp = document.createElement('input'); inp.type='number'; inp.step='0.1'; inp.value = (i===1&&n===2)?65:(n===2&&i===2?35:(n===3? (i<3?33:34):100));
+    inp.id = `bus${i}Pct`;
+    wrap.appendChild(lab); wrap.appendChild(inp);
+    host.appendChild(wrap);
+    inp.addEventListener('input', recalc);
+  }
 }
 
 function recalc(){
-  const cc=toCents(document.getElementById('cc').value);
-  let cash=toCents(document.getElementById('cash').value);
-  const total=cc+cash;
+  // inputs
+  const cc = toCents($('cc').value);
+  let cash = toCents($('cash').value);
+  const total = cc + cash;
 
-  const busPct=parseFloat(document.getElementById('busPct').value)||0;
-  const bus1Pct=parseFloat(document.getElementById('bus1Pct').value)||0;
-  const runnerPct=parseFloat(document.getElementById('runnerPct').value)||0;
+  const busPoolPct = parseFloat($('busPoolPct').value)||0;
+  const bartenderOn = $('bartenderOn').checked;
+  const bartenderPct = parseFloat($('bartenderPct').value)||0;
+  const runnerOn = $('runnerOn').checked;
+  const runnerPct = parseFloat($('runnerPct').value)||0;
 
-  const bartender=Math.round(0.05*total);
-  const busPool=Math.round(busPct/100*total);
-  const bus1Target=Math.round(bus1Pct/100*busPool);
-  const bus2Target=busPool-bus1Target;
-  let runnerTarget=Math.round(runnerPct/100*total);
+  const busCount = Math.max(1, Math.min(3, parseInt(($('busCount').value||'1'),10)));
+  const busserWeights = [];
+  for (let i=1;i<=busCount;i++){
+    const v = parseFloat(($(`bus${i}Pct`)?.value)||0);
+    busserWeights.push(Math.max(0,v));
+  }
+  // normalize by using weights directly
+  const bartender = bartenderOn ? Math.round(total * (bartenderPct/100)) : 0;
 
-  // --- Cash-first logic ---
-  let bus1Cash=0, bus2Cash=0, runnerCash=0;
+  const busPool = Math.round(total * (busPoolPct/100));
+  const busserTargets = splitByWeights(busPool, busserWeights);
 
-  // pay Busboy 1 from cash
-  if(cash>=bus1Target){ bus1Cash=bus1Target; cash-=bus1Target; }
-  else { bus1Cash=cash; cash=0; }
+  const runnerTarget = runnerOn ? Math.round(total * (runnerPct/100)) : 0;
 
-  // if cash left, pay Busboy 2
-  if(cash>0){
-    if(cash>=bus2Target){ bus2Cash=bus2Target; cash-=bus2Target; }
-    else { bus2Cash=cash; cash=0; }
+  // --- Cash-first: Busser1 -> Busser2 -> Busser3 -> Runner (if on) ---
+  const busserCash = Array(busCount).fill(0);
+  for (let i=0;i<busCount;i++){
+    const need = busserTargets[i] - busserCash[i];
+    const pay = Math.min(cash, Math.max(0, need));
+    busserCash[i] += pay; cash -= pay;
+  }
+  let runnerCash = 0;
+  if (runnerOn && cash>0){
+    const pay = Math.min(cash, runnerTarget);
+    runnerCash += pay; cash -= pay;
+  }
+  // Any remaining cash after those flows -> waiters remainder implicitly
+
+  // Books
+  const busserBook = busserTargets.map((t,i)=> Math.max(0, t - busserCash[i]));
+  const runnerBook = Math.max(0, runnerTarget - runnerCash);
+
+  // Round bussers to nearest $0.50 (each busser’s total)
+  const busserTotals = busserTargets.map((_,i)=> round50(busserBook[i] + busserCash[i]));
+  const bussersSum = busserTotals.reduce((a,b)=>a+b,0);
+
+  const runnerTotal = runnerBook + runnerCash;
+
+  // Remaining for waiters after rounding + bartender + runner
+  const remaining = total - (bussersSum + runnerTotal + bartender);
+
+  // Waiters split
+  const waiterNames = $('waiters').value.split(',').map(x=>x.trim()).filter(Boolean);
+  const waiterSplit = (function(){
+    if (waiterNames.length===0) return {list:[], each:0};
+    const base = Math.floor(remaining / waiterNames.length);
+    let rem = remaining - base*waiterNames.length;
+    const list = Array.from({length:waiterNames.length}, (_,i)=> base + (i<rem?1:0));
+    return {list, each: base};
+  })();
+
+  // --- Render metrics ---
+  $('mTotal').textContent = fmtUSD(total);
+  $('mBusPoolLabel').textContent = `Bussers pool (${busPoolPct}%)`;
+  $('mBusPool').textContent = fmtUSD(busPool);
+  $('mRunnerLabel').textContent = runnerOn ? `Runner (${runnerPct}%)` : 'Runner (off)';
+  $('mRunner').textContent = fmtUSD(runnerTarget);
+  $('mRemain').textContent = fmtUSD(remaining);
+
+  // Bussers block
+  const busMetrics = $('busserMetrics'); busMetrics.innerHTML = '';
+  for (let i=0;i<busCount;i++){
+    const box = document.createElement('div');
+    box.className = 'metric';
+    const name = ($(`bus${i+1}Name`)?.value)||`Busser ${i+1}`;
+    box.innerHTML = `<div class="label">${name}</div><div class="value">${fmtUSD(busserTotals[i])}</div>`;
+    busMetrics.appendChild(box);
   }
 
-  // if still cash left, goes to runner
-  if(cash>0){ runnerCash=cash; cash=0; }
+  // Payout list
+  const list = $('payoutList'); list.innerHTML = '';
 
-  // compute book portions
-  let bus1Book=bus1Target-bus1Cash;
-  let bus2Book=bus2Target-bus2Cash;
-  let runnerBook=runnerTarget-runnerCash;
+  // Bartender
+  if (bartenderOn){
+    const bartDiv = document.createElement('div');
+    bartDiv.className='pill';
+    bartDiv.innerHTML = `<div><b>Bartender</b><div class="small">${bartenderPct}% of total</div></div><div><b>${fmtUSD(bartender)}</b></div>`;
+    list.appendChild(bartDiv);
+  }
 
-  // round busser totals (cash+book)
-  let bus1Total=round50(bus1Book+bus1Cash);
-  let bus2Total=round50(bus2Book+bus2Cash);
+  // Bussers with cash/book details
+  for (let i=0;i<busCount;i++){
+    const name = ($(`bus${i+1}Name`)?.value)||`Busser ${i+1}`;
+    const row = document.createElement('div');
+    row.className='pill';
+    row.innerHTML = `<div><b>${name}</b><div class="small">Cash: ${fmtUSD(busserCash[i])} + Book: ${fmtUSD(busserBook[i])}</div></div><div><b>${fmtUSD(busserTotals[i])}</b></div>`;
+    list.appendChild(row);
+  }
 
-  // recompute actual totals after rounding
-  const totalBussers=bus1Total+bus2Total;
-  const totalBart= bartender;
-  const totalRunner=runnerBook+runnerCash;
-  const remaining=total - (totalBussers + totalRunner + totalBart);
+  // Runner row (with cash/book) even if off show 0
+  const runRow = document.createElement('div');
+  runRow.className='pill';
+  runRow.innerHTML = `<div><b>${$('runnerName').value || 'Food Runner'}</b><div class="small">Cash: ${fmtUSD(runnerCash)} + Book: ${fmtUSD(runnerBook)}</div></div><div><b>${fmtUSD(runnerTotal)}</b></div>`;
+  list.appendChild(runRow);
 
-  const waiterNames=document.getElementById('waiters').value.split(',').map(x=>x.trim()).filter(Boolean);
-  const split=distributeEvenly(remaining,waiterNames.length);
-
-  // display metrics
-  document.getElementById('mTotal').innerText=fmtUSD(total);
-  document.getElementById('mBus').innerText=fmtUSD(busPool);
-  document.getElementById('mRunner').innerText=fmtUSD(runnerTarget);
-  document.getElementById('mBus1').innerText=fmtUSD(bus1Total);
-  document.getElementById('mBus2').innerText=fmtUSD(bus2Total);
-  document.getElementById('mRemain').innerText=fmtUSD(remaining);
-
-  const payouts=document.getElementById('waiterPayouts');
-  payouts.innerHTML='';
-
-  const bartDiv=document.createElement('div');
-  bartDiv.className='pill';
-  bartDiv.innerHTML=`<div><b>Bartender</b><div class='small'>5% of total</div></div><div><b>${fmtUSD(bartender)}</b></div>`;
-  payouts.appendChild(bartDiv);
-
-  const b1=document.createElement('div');
-  b1.className='pill';
-  b1.innerHTML=`<div><b>Busboy 1</b><div class='small'>Cash: ${fmtUSD(bus1Cash)} + Book: ${fmtUSD(bus1Book)}</div></div><div><b>${fmtUSD(bus1Total)}</b></div>`;
-  payouts.appendChild(b1);
-
-  const b2=document.createElement('div');
-  b2.className='pill';
-  b2.innerHTML=`<div><b>Busboy 2</b><div class='small'>Cash: ${fmtUSD(bus2Cash)} + Book: ${fmtUSD(bus2Book)}</div></div><div><b>${fmtUSD(bus2Total)}</b></div>`;
-  payouts.appendChild(b2);
-
-  const run=document.createElement('div');
-  run.className='pill';
-  run.innerHTML=`<div><b>Runner</b><div class='small'>Cash: ${fmtUSD(runnerCash)} + Book: ${fmtUSD(runnerBook)}</div></div><div><b>${fmtUSD(totalRunner)}</b></div>`;
-  payouts.appendChild(run);
-
+  // Waiters
   waiterNames.forEach((n,i)=>{
-    const c=split.list[i]||0;
-    const d=document.createElement('div');
+    const cents = waiterSplit.list[i]||0;
+    const d = document.createElement('div');
     d.className='pill';
-    d.innerHTML=`<div><b>${n}</b><div class='small'>Equal share</div></div><div><b>${fmtUSD(c)}</b></div>`;
-    payouts.appendChild(d);
+    d.innerHTML = `<div><b>${n}</b><div class="small">Equal share</div></div><div><b>${fmtUSD(cents)}</b></div>`;
+    list.appendChild(d);
   });
 
-  const sum=totalBussers+totalBart+totalRunner+split.list.reduce((a,b)=>a+b,0);
-  document.getElementById('checkLine').innerText=`Check: ${fmtUSD(sum)} = ${fmtUSD(total)}`;
+  // Check line
+  const sum = bussersSum + bartender + runnerTotal + waiterSplit.list.reduce((a,b)=>a+b,0);
+  $('checkLine').textContent = `Check: ${fmtUSD(sum)} = ${fmtUSD(total)}`;
 }
 
-['cc','cash','busPct','bus1Pct','runnerPct','bus1Name','bus2Name','runnerName','waiters'].forEach(id=>{
-  document.getElementById(id).addEventListener('input',recalc);
+// wiring
+['cc','cash','busPoolPct','busCount','bartenderOn','bartenderPct','runnerOn','runnerPct','bus1Name','bus2Name','bus3Name','runnerName','waiters']
+  .forEach(id => $(id).addEventListener('input', recalc));
+
+$('bartenderOn').addEventListener('change', ()=>{
+  $('bartenderRow').style.display = $('bartenderOn').checked ? '' : 'none';
+  recalc();
 });
-function copyBreakdown(){navigator.clipboard.writeText(document.body.innerText);alert('Copied breakdown.');}
+$('runnerOn').addEventListener('change', ()=>{
+  $('runnerRow').style.display = $('runnerOn').checked ? '' : 'none';
+  recalc();
+});
+
+$('busCount').addEventListener('input', ()=>{
+  renderBusserPercentInputs();
+  recalc();
+});
+
+function copyBreakdown(){ navigator.clipboard.writeText(document.body.innerText); alert('Copied breakdown.'); }
 function resetAll(){
-  document.querySelectorAll('input').forEach(i=>i.value='');
-  document.getElementById('busPct').value=15;
-  document.getElementById('bus1Pct').value=65;
-  document.getElementById('runnerPct').value=7.5;
-  document.getElementById('waiters').value='Waiter 1, Waiter 2';
+  document.querySelectorAll('input[type="number"]').forEach(i=> i.value = i.id==='busCount' ? i.value : '');
+  $('busPoolPct').value = 15;
+  $('busCount').value = 2;
+  $('bartenderOn').checked = true; $('bartenderPct').value = 5;
+  $('runnerOn').checked = true; $('runnerPct').value = 7.5;
+  $('waiters').value = 'Waiter 1, Waiter 2';
+  $('bus1Name').value='Busser 1'; $('bus2Name').value='Busser 2'; $('bus3Name').value='Busser 3';
+  renderBusserPercentInputs();
   recalc();
 }
-recalc();
-if('serviceWorker' in navigator){navigator.serviceWorker.register('service-worker.js');}
-</script>
 
+// init
+renderBusserPercentInputs();
+$('bartenderRow').style.display = $('bartenderOn').checked ? '' : 'none';
+$('runnerRow').style.display = $('runnerOn').checked ? '' : 'none';
+recalc();
+
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js'); }
+</script>
 </body>
 </html>
