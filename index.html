@@ -6,22 +6,41 @@
 <title>TipSplit 💚</title>
 <style>
   :root {
-    --green:#00a86b;--bg:#f6f7f9;--white:#fff;--text:#111;--muted:#666;--border:#e4e6ea;
+    --green:#00a86b;
+    --bg:#f6f7f9;
+    --white:#fff;
+    --text:#111;
+    --muted:#666;
+    --border:#e4e6ea;
   }
-  body{margin:0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);}
+  body {
+    margin:0;
+    font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    transition:background .3s,color .3s;
+  }
+  .dark {
+    --bg:#111;
+    --text:#f6f7f9;
+    --white:#1b1b1b;
+    --border:#333;
+    --muted:#aaa;
+  }
   .container{max-width:1000px;margin:0 auto;padding:16px;}
   h1{text-align:center;color:var(--green);margin:8px 0 12px;}
   .card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 2px 4px rgba(0,0,0,.05);}
   .grid{display:grid;gap:12px;}
   @media(min-width:760px){.grid.cols-2{grid-template-columns:repeat(2,1fr)}.grid.cols-3{grid-template-columns:repeat(3,1fr)}.grid.cols-4{grid-template-columns:repeat(4,1fr)}}
-  input[type=number],input[type=text]{width:100%;padding:10px;margin-top:4px;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;}
+  input[type=number],input[type=text]{width:100%;padding:10px;margin-top:4px;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;background:var(--white);color:var(--text);}
   .row{display:flex;gap:8px;align-items:center;}
   .btn{background:var(--green);color:#fff;border:none;padding:10px 14px;border-radius:12px;font-weight:600;cursor:pointer;}
   .btn.ghost{background:#d0d5db;color:#111;}
-  .metric{background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px;text-align:center;}
+  .metric{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:10px;text-align:center;}
   .metric .value{font-weight:700;color:var(--green);}
-  .pill{border:1px solid var(--border);border-radius:16px;background:#fff;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;}
+  .pill{border:1px solid var(--border);border-radius:16px;background:var(--white);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;}
   .small{font-size:.8rem;color:var(--muted);}
+  #comfortMsg{display:none;text-align:center;margin-top:12px;color:var(--green);font-weight:600;}
 </style>
 </head>
 <body>
@@ -54,6 +73,10 @@
         <label># of Runners (1–2)</label><input id="runnerCount" type="number" min="1" max="2" value="1">
         <div id="runnerPercents" class="grid cols-2"></div>
       </div>
+
+      <div class="row" style="margin-top:12px;">
+        <input id="sethToggle" type="checkbox"><label for="sethToggle">Was Seth Manager</label>
+      </div>
     </div>
 
     <div class="card">
@@ -76,15 +99,14 @@
     <div id="busserMetrics" class="grid cols-3" style="margin-top:12px;"></div>
     <div id="payoutList" style="margin-top:12px;"></div>
     <div class="small" id="checkLine" style="margin-top:8px;"></div>
+    <div id="comfortMsg">don’t worry, you’ll be home soon this is almost over</div>
   </div>
 </div>
 
 <script>
 function $(id){return document.getElementById(id);}
-function toCents(v){const n=parseFloat(v);return isNaN(n)?0:Math.round(n*100);}
-function fmtUSD(c){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format((c||0)/100);}
-function round50(c){const d=c/100;const r=Math.round(d*2)/2;return Math.round(r*100);}
-function splitByWeights(total,weights){const s=weights.reduce((a,b)=>a+b,0);if(s<=0)return weights.map(_=>0);const raw=weights.map(w=>total*w/s);const f=raw.map(x=>Math.floor(x));let rem=total-f.reduce((a,b)=>a+b,0);const idx=raw.map((x,i)=>({i,frac:x-Math.floor(x)})).sort((a,b)=>b.frac-a.frac);for(let k=0;k<idx.length&&rem>0;k++){f[idx[k].i]++;rem--;}return f;}
+function fmtUSD(num){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(num);}
+function splitByWeights(total,weights){const sum=weights.reduce((a,b)=>a+b,0);if(sum<=0)return weights.map(()=>0);return weights.map(w=>total*(w/sum));}
 
 function renderBusserPercentInputs(){
   const n=Math.max(1,Math.min(3,parseInt($('busCount').value||'1',10)));
@@ -98,7 +120,6 @@ function renderBusserPercentInputs(){
     inp.addEventListener('input',recalc);
   }
 }
-
 function renderRunnerPercentInputs(){
   const n=Math.max(1,Math.min(2,parseInt($('runnerCount').value||'1',10)));
   const host=$('runnerPercents');host.innerHTML='';
@@ -112,50 +133,61 @@ function renderRunnerPercentInputs(){
 }
 
 function recalc(){
-  const cc=toCents($('cc').value);let cash=toCents($('cash').value);const total=cc+cash;
-  const busPct=parseFloat($('busPoolPct').value)||0;const bartenderOn=$('bartenderOn').checked;const bartenderPct=parseFloat($('bartenderPct').value)||0;
-  const runnerOn=$('runnerOn').checked;const runnerPct=parseFloat($('runnerPct').value)||0;
+  const cc=parseFloat($('cc').value)||0;
+  let cash=parseFloat($('cash').value)||0;
+  const total=cc+cash;
+  const busPct=parseFloat($('busPoolPct').value)||0;
+  const bartenderOn=$('bartenderOn').checked;
+  const bartenderPct=parseFloat($('bartenderPct').value)||0;
+  const runnerOn=$('runnerOn').checked;
+  const runnerPct=parseFloat($('runnerPct').value)||0;
   const busCount=parseInt($('busCount').value)||1;
   const busWeights=[];for(let i=1;i<=busCount;i++){busWeights.push(parseFloat(($(`bus${i}Pct`)?.value)||0));}
-  const bartender=bartenderOn?Math.round(total*(bartenderPct/100)):0;
-  const busPool=Math.round(total*(busPct/100));const busTargets=splitByWeights(busPool,busWeights);
 
+  const bartender=bartenderOn?total*(bartenderPct/100):0;
+  const busPool=total*(busPct/100);
+  const busTargets=splitByWeights(busPool,busWeights);
   const busCash=Array(busCount).fill(0);
   for(let i=0;i<busCount;i++){const need=busTargets[i]-busCash[i];const pay=Math.min(cash,Math.max(0,need));busCash[i]+=pay;cash-=pay;}
   const busBook=busTargets.map((t,i)=>Math.max(0,t-busCash[i]));
-  const busTotals=busTargets.map((_,i)=>round50(busBook[i]+busCash[i]));
+  const busTotals=busTargets.map((_,i)=>busBook[i]+busCash[i]);
   const bussersSum=busTotals.reduce((a,b)=>a+b,0);
 
-  // Runners
   const runnerCount=parseInt($('runnerCount').value)||1;
   const rWeights=[];for(let i=1;i<=runnerCount;i++){rWeights.push(parseFloat(($(`runner${i}Pct`)?.value)||0));}
-  const runnerPool=runnerOn?Math.round(total*(runnerPct/100)):0;const rTargets=splitByWeights(runnerPool,rWeights);
+  const runnerPool=runnerOn?total*(runnerPct/100):0;
+  const rTargets=splitByWeights(runnerPool,rWeights);
   const rCash=Array(runnerCount).fill(0);
   for(let i=0;i<runnerCount&&cash>0;i++){const need=rTargets[i]-rCash[i];const pay=Math.min(cash,Math.max(0,need));rCash[i]+=pay;cash-=pay;}
   const rBook=rTargets.map((t,i)=>Math.max(0,t-rCash[i]));
-  const rTotals=rTargets.map((_,i)=>round50(rBook[i]+rCash[i]));
+  const rTotals=rTargets.map((_,i)=>rBook[i]+rCash[i]);
   const runnersSum=rTotals.reduce((a,b)=>a+b,0);
 
   const remain=total-(bussersSum+runnersSum+bartender);
   const waiterNames=$('waiters').value.split(',').map(x=>x.trim()).filter(Boolean);
-  const waiterSplit=(function(){if(waiterNames.length===0)return{list:[],each:0};const base=Math.floor(remain/waiterNames.length);let rem=remain-base*waiterNames.length;const list=Array.from({length:waiterNames.length},(_,i)=>base+(i<rem?1:0));return{list};})();
-  
-  // Display
+  const waiterEach=waiterNames.length>0?remain/waiterNames.length:0;
+
   $('mTotal').textContent=fmtUSD(total);
   $('mBusPool').textContent=fmtUSD(busPool);
   $('mRunner').textContent=fmtUSD(runnerPool);
   $('mRemain').textContent=fmtUSD(remain);
 
   const busMet=$('busserMetrics');busMet.innerHTML='';
-  for(let i=0;i<busCount;i++){const name=$(`bus${i+1}Name`).value;const div=document.createElement('div');div.className='metric';div.innerHTML=`<div>${name}</div><div class="value">${fmtUSD(busTotals[i])}</div>`;busMet.appendChild(div);}
-  
+  for(let i=0;i<busCount;i++){
+    const name=$(`bus${i+1}Name`).value;
+    const div=document.createElement('div');
+    div.className='metric';
+    div.innerHTML=`<div>${name}</div><div class="value">${fmtUSD(busTotals[i])}</div>`;
+    busMet.appendChild(div);
+  }
+
   const list=$('payoutList');list.innerHTML='';
   if(bartenderOn)list.innerHTML+=`<div class="pill"><div><b>Bartender</b><div class="small">${bartenderPct}%</div></div><div><b>${fmtUSD(bartender)}</b></div></div>`;
   for(let i=0;i<busCount;i++){const n=$(`bus${i+1}Name`).value;list.innerHTML+=`<div class="pill"><div><b>${n}</b><div class="small">Cash: ${fmtUSD(busCash[i])} + Book: ${fmtUSD(busBook[i])}</div></div><div><b>${fmtUSD(busTotals[i])}</b></div></div>`;}
   for(let i=0;i<runnerCount;i++){const n=$(`runner${i+1}Name`).value;list.innerHTML+=`<div class="pill"><div><b>${n}</b><div class="small">Cash: ${fmtUSD(rCash[i])} + Book: ${fmtUSD(rBook[i])}</div></div><div><b>${fmtUSD(rTotals[i])}</b></div></div>`;}
-  waiterNames.forEach((n,i)=>{list.innerHTML+=`<div class="pill"><div><b>${n}</b><div class="small">Equal share</div></div><div><b>${fmtUSD(waiterSplit.list[i])}</b></div></div>`;});
-  
-  const sum=bussersSum+runnersSum+bartender+waiterSplit.list.reduce((a,b)=>a+b,0);
+  waiterNames.forEach((n)=>{list.innerHTML+=`<div class="pill"><div><b>${n}</b><div class="small">Equal share</div></div><div><b>${fmtUSD(waiterEach)}</b></div></div>`;});
+
+  const sum=bussersSum+runnersSum+bartender+(waiterEach*waiterNames.length);
   $('checkLine').textContent=`Check: ${fmtUSD(sum)} = ${fmtUSD(total)}`;
 }
 
@@ -164,11 +196,22 @@ $('busCount').addEventListener('input',()=>{renderBusserPercentInputs();recalc()
 $('runnerCount').addEventListener('input',()=>{renderRunnerPercentInputs();recalc();});
 $('bartenderOn').addEventListener('change',()=>{$('bartenderRow').style.display=$('bartenderOn').checked?'':'none';recalc();});
 $('runnerOn').addEventListener('change',()=>{$('runnerRow').style.display=$('runnerOn').checked?'':'none';recalc();});
+$('sethToggle').addEventListener('change',()=>{
+  if($('sethToggle').checked){
+    document.body.classList.add('dark');
+    $('comfortMsg').style.display='block';
+  }else{
+    document.body.classList.remove('dark');
+    $('comfortMsg').style.display='none';
+  }
+});
 
 function copyBreakdown(){navigator.clipboard.writeText(document.body.innerText);alert('Copied breakdown.');}
 function resetAll(){location.reload();}
 
-renderBusserPercentInputs();renderRunnerPercentInputs();recalc();
+renderBusserPercentInputs();
+renderRunnerPercentInputs();
+recalc();
 </script>
 </body>
 </html>
