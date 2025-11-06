@@ -18,14 +18,21 @@
     font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
     background:var(--bg);
     color:var(--text);
-    transition:background .3s,color .3s;
+    transition:background .6s,color .6s;
   }
-  .dark {
+  body.dark {
     --bg:#111;
     --text:#f6f7f9;
     --white:#1b1b1b;
     --border:#333;
     --muted:#aaa;
+  }
+  body.amanda {
+    --bg:#220000;
+    --text:#ffcccc;
+    --white:#330000;
+    --border:#550000;
+    --muted:#ffaaaa;
   }
   .container{max-width:1000px;margin:0 auto;padding:16px;}
   h1{text-align:center;color:var(--green);margin:8px 0 12px;}
@@ -41,6 +48,7 @@
   .pill{border:1px solid var(--border);border-radius:16px;background:var(--white);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;}
   .small{font-size:.8rem;color:var(--muted);}
   #comfortMsg{display:none;text-align:center;margin-top:12px;color:var(--green);font-weight:600;}
+  #amandaMsg{display:none;text-align:center;margin-top:12px;color:#ff6666;font-weight:600;}
 </style>
 </head>
 <body>
@@ -77,6 +85,9 @@
       <div class="row" style="margin-top:12px;">
         <input id="sethToggle" type="checkbox"><label for="sethToggle">Was Seth Manager</label>
       </div>
+      <div class="row" style="margin-top:8px;">
+        <input id="amandaToggle" type="checkbox"><label for="amandaToggle">Amanda was Manager</label>
+      </div>
     </div>
 
     <div class="card">
@@ -100,8 +111,14 @@
     <div id="payoutList" style="margin-top:12px;"></div>
     <div class="small" id="checkLine" style="margin-top:8px;"></div>
     <div id="comfortMsg">don’t worry, you’ll be home soon this is almost over</div>
+    <div id="amandaMsg">breathe easy — everything’s under control now</div>
   </div>
 </div>
+
+<!-- calming background audio -->
+<audio id="amandaAudio" loop>
+  <source src="https://cdn.pixabay.com/download/audio/2023/05/30/audio_6d1f00f0cc.mp3?filename=calm-piano-14705.mp3" type="audio/mpeg">
+</audio>
 
 <script>
 function $(id){return document.getElementById(id);}
@@ -191,18 +208,40 @@ function recalc(){
   $('checkLine').textContent=`Check: ${fmtUSD(sum)} = ${fmtUSD(total)}`;
 }
 
+// listeners
 ['cc','cash','busPoolPct','busCount','bartenderOn','bartenderPct','runnerOn','runnerPct','runnerCount','bus1Name','bus2Name','bus3Name','runner1Name','runner2Name','waiters'].forEach(id=>$(id).addEventListener('input',recalc));
 $('busCount').addEventListener('input',()=>{renderBusserPercentInputs();recalc();});
 $('runnerCount').addEventListener('input',()=>{renderRunnerPercentInputs();recalc();});
 $('bartenderOn').addEventListener('change',()=>{$('bartenderRow').style.display=$('bartenderOn').checked?'':'none';recalc();});
 $('runnerOn').addEventListener('change',()=>{$('runnerRow').style.display=$('runnerOn').checked?'':'none';recalc();});
+
 $('sethToggle').addEventListener('change',()=>{
   if($('sethToggle').checked){
     document.body.classList.add('dark');
     $('comfortMsg').style.display='block';
-  }else{
+    $('amandaToggle').checked=false;
+    document.body.classList.remove('amanda');
+    $('amandaMsg').style.display='none';
+    $('amandaAudio').pause();
+  } else {
     document.body.classList.remove('dark');
     $('comfortMsg').style.display='none';
+  }
+});
+
+$('amandaToggle').addEventListener('change',()=>{
+  const audio=$('amandaAudio');
+  if($('amandaToggle').checked){
+    document.body.classList.add('amanda');
+    $('amandaMsg').style.display='block';
+    $('sethToggle').checked=false;
+    document.body.classList.remove('dark');
+    $('comfortMsg').style.display='none';
+    audio.volume=0.4; audio.play();
+  } else {
+    document.body.classList.remove('amanda');
+    $('amandaMsg').style.display='none';
+    audio.pause(); audio.currentTime=0;
   }
 });
 
